@@ -1,12 +1,22 @@
-[scraping]
-scraping_mode = posts
-#users, posts, period
+[create_dictionaries]
+# Uses Instagram API
 
-[dicts]
-get_accounts_dict = False
-get_posts_dict = False
+accounts = False
+# get a json with the account info of the users
+
+posts = False
+# get a json with the info of the last posts of the account
+
 number_of_posts = 1
+# how many posts back to get (if create_posts_dict = True)
+
+
+[scraping]
+# post_list / dict_scraping
+scraping_mode = dict_scraping
+
 
 [period]
-since = 2020-01-01
-until = 2020-01-31
+# Format YYYY-MM-DD (both optional)
+since = 
+until = 

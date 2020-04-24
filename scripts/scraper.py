@@ -1,26 +1,21 @@
-import pandas as pd
 import os
-
+import pandas as pd
+from datetime import datetime
+from re import match
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
-from datetime import datetime
-from time import sleep, strftime
-from re import match
+from time import sleep
 
 
 def load_driver():
 
     # Find Firefox Profile
     profiles_folder = f"{os.environ['appdata']}\Mozilla\Firefox\Profiles"
-    for folder in os.listdir(profiles_folder):
-        if "default-release" in folder:
+    for profile in os.listdir(profiles_folder):
+        if "default-release" in profile:
             firefox_profile = webdriver.FirefoxProfile(
-                f"{profiles_folder}/{folder}")
+                f"{profiles_folder}/{profile}")
             driver = webdriver.Firefox(firefox_profile)
-            break
-
-        else:
-            driver = webdriver.Firefox()
 
     driver.get('https://www.instagram.com/p/B8o367kgObt/')
 
@@ -34,150 +29,234 @@ def load_driver():
     return driver
 
 
-def post_scraper(post):
+def scrape_post(driver, post):
 
-    post_df = pd.DataFrame()
+    def load_comments():
+
+        # Load all comments
+        try:
+            while True:
+                load_more_comments = driver.find_element_by_css_selector(
+                    '.MGdpg > button')
+                load_more_comments.click()
+                sleep(2)
+
+        except NoSuchElementException:
+            pass
+
+        # Load replies to comments
+        try:
+            view_replies_buttons = driver.find_elements_by_css_selector(
+                '.y3zKF')
+
+            for button in view_replies_buttons:
+                text = driver.execute_script(
+                    "return arguments[0].textContent;", button)
+                while "Ver" in text or "View" in text:
+                    button.click()
+                    sleep(0.5)
+                    text = driver.execute_script(
+                        "return arguments[0].textContent;", button)
+
+        except NoSuchElementException:
+            pass
+
+    def get_comment_info(comment):
+
+        driver.execute_script("arguments[0].scrollIntoView();", comment)
+
+        user = comment.find_element_by_css_selector('h3 a').text
+
+        content = comment.find_element_by_css_selector('.C4VMK span')
+        content = driver.execute_script(
+            "return arguments[0].textContent;", content)
+
+        info = comment.find_element_by_css_selector('.aGBdT')
+
+        likes = info.find_element_by_css_selector(
+            'div > button:nth-of-type(1)')
+        m = match(r"(\d+)", likes.text)
+        if m:
+            like_count = m[0]
+        else:
+            like_count = 0
+
+        comment_date = info.find_element_by_css_selector(
+            'time').get_attribute('datetime')
+        m = match(
+            r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", comment_date)
+        comment_date = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
+        comment_date = datetime.strptime(comment_date, "%Y-%m-%d-%H-%M-%S")
+        comment_date = datetime.timestamp(comment_date)
+
+        permalink = info.find_element_by_css_selector(
+            '.gU-I7').get_attribute('href')
+        m = match(
+            r"https:\/\/www\.instagram\.com\/p\/(?:.+)\/c\/(?P<c>\d+)\/(r\/(?P<r>\d+)\/)?", permalink)
+
+        if m['r']:
+            comment_id = m['r']
+            reply_to = m['c']
+        else:
+            comment_id = m['c']
+            reply_to = None
+
+        comment_df = pd.DataFrame({
+            "c_id": [comment_id],
+            "c_reply_to": [reply_to],
+            "c_date": [comment_date],
+            "c_user": [user],
+            "c_content": [content],
+            "c_likes": [like_count],
+            "c_permalink": [permalink]
+        })
+
+        return comment_df
 
     driver.get(post)
     sleep(2)
+    load_comments()
 
-    # Load more comments
+    post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
+
     try:
-        while True:
-            load_more_comments = driver.find_element_by_css_selector(
-                '.MGdpg > button')
-            load_more_comments.click()
-            sleep(2)
-
+        post_likes = driver.find_element_by_css_selector(".Nm9Fw span").text
     except NoSuchElementException:
-        pass
+        driver.find_element_by_css_selector(".vcOH2").click()
+        post_likes = driver.find_element_by_css_selector(".vJRqr span").text
 
-    # Load replies to comments
-    try:
-        view_replies_buttons = driver.find_elements_by_css_selector('.y3zKF')
+    post_likes = post_likes.replace(",", "")
 
-        for button in view_replies_buttons:
-            text = driver.execute_script(
-                "return arguments[0].textContent;", button)
-            while "Ver" in text or "View" in text:
-                button.click()
-                sleep(0.5)
-                text = driver.execute_script(
-                    "return arguments[0].textContent;", button)
+    post_info = driver.find_element_by_css_selector(".c-Yi7")
 
-    except NoSuchElementException:
-        pass
+    post_id = post_info.get_attribute('href')
+    m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/", post_id)
+    post_id = m['post_id']
+
+    post_created_at = post_info.find_element_by_css_selector(
+        "._1o9PC").get_attribute('datetime')
+    m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", post_created_at)
+    post_created_at = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
+    post_created_at = datetime.strptime(post_created_at, "%Y-%m-%d-%H-%M-%S")
+    post_created_at = datetime.timestamp(post_created_at)
+
+    post_df = pd.DataFrame()
 
     for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc'):
 
         comment_df = get_comment_info(comment)
         post_df = pd.concat([post_df, comment_df])
 
+    post_df["p_id"] = post_id
+    post_df["p_author"] = post_author
+    post_df["p_date"] = post_created_at
+    post_df["p_likes"] = post_likes
+    post_df["p_comments"] = len(post_df.index)
+
+    # Reorder columns with post info first
+    new_order = list(
+        post_df.columns.values[7:]) + list(post_df.columns.values[:7])
+    post_df = post_df.reindex(columns=new_order)
+
+    # Convert dtypes of columns
+    convert_dict = {
+        "p_likes": int,
+        "p_comments": int,
+        "c_id": object,
+        "c_reply_to": object,
+        "c_likes": int,
+    }
+    post_df = post_df.astype(convert_dict)
+
     return post_df
 
 
-def get_comment_info(comment):
+def save_dataframe(df, path):
 
-    partial_df = pd.DataFrame()
+    try:
+        base_df = pd.read_csv(path)
+        new_df = pd.concat([base_df, df])
+        new_df.to_csv(path, index=False)
 
-    user = None
-    content = None
-    like_count = 0
-    post_id = None
-    conv_id = None
-    reply_id = None
-    is_reply = False
-    comment_date = None
-
-    post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
-
-    user = comment.find_element_by_css_selector('h3 a').text
-
-    content = comment.find_element_by_css_selector('span')
-    content = driver.execute_script(
-        "return arguments[0].textContent;", content)
-
-    info = comment.find_element_by_css_selector('.aGBdT')
-
-    likes = info.find_element_by_css_selector('div > button:nth-of-type(1)')
-    likes = match(r"(\d+)", likes.text)
-    if likes:
-        like_count = int(likes[0])
-
-    comment_date = info.find_element_by_css_selector(
-        'time').get_attribute('datetime')
-    m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)", comment_date)
-    comment_date = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
-    comment_date = datetime.strptime(comment_date, "%Y-%m-%d-%H-%M-%S")
-    comment_date = int(datetime.timestamp(comment_date))
-
-    permalink = info.find_element_by_css_selector(
-        '.gU-I7').get_attribute('href')
-    m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/c\/(?P<conversation_id>\d+)\/(r\/(?P<reply_id>\d+)\/)?", permalink)
-    post_id = m['post_id']
-    conv_id = m['conversation_id']
-    if m['reply_id']:
-        reply_id = m['reply_id']
-        is_reply = True
-
-    partial_df["post_author"] = [post_author]
-    partial_df["post_id"] = [post_id]
-    partial_df["conv_id"] = [conv_id]
-    partial_df["reply_id"] = [reply_id]
-    partial_df["is_reply"] = [is_reply]
-    partial_df["user"] = [user]
-    partial_df["comment"] = [content]
-    partial_df["like_count"] = [like_count]
-    partial_df["timestamp"] = [comment_date]
-
-    return partial_df
+    except (FileNotFoundError):
+        df.to_csv(path, index=False)
 
 
-def main(posts_dict, mode="by_post"):
+def get_file_path(timestamp, prefix):
 
-    load_driver()
+    comments_folder = os.path.abspath("../comments")
+    filename = f"{prefix}_{timestamp}.csv"
+    file_path = os.path.join(comments_folder, filename)
 
-    now = datetime.now()
-    print(type(now))
-    print(now.strftime("%H%M%S"))
+    return file_path
 
-    base_df = pd.DataFrame()
 
-    if mode == "by_period":
+def posts_from_master(userlist, period):
 
-        for user in posts_dict:
-            print(f"Scraping {user}'s posts")
+    master_path = os.path.abspath("../dictionaries/posts/master.csv")
+    master_df = pd.read_csv(master_path)
 
-            path = f'../comments/{user}'
-            if not os.path.exists(path):
-                os.makedirs(path)
+    since_ts, until_ts = period
 
-            for code in posts_dict[user]:
-                print(
-                    f"Post {posts_dict[user].index(code)+1} of {len(posts_dict[user])}")
+    filtered_df = master_df.loc[master_df['p_author'].isin(userlist)]
+    filtered_df = filtered_df[filtered_df['p_date'].between(
+        since_ts, until_ts)]
 
-                link = f"https://www.instagram.com/p/{code}"
+    filtered_df = filtered_df.drop(columns=["p_id", "p_date"])
 
-                post_df = post_scraper(link)
-                base_df = pd.concat([base_df, post_df])
+    posts = list(filtered_df.to_records(index=False))
 
-                base_df.to_csv(
-                    f"../comments/{user}_{now.strftime('%Y%m%d')}.csv", index=False)
+    return posts
 
-    if mode == "by_post":
 
-        for link in posts_dict['default']:
+def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
-            print(
-                f"Post {posts_dict['default'].index(link)+1} of {len(posts_dict['default'])}")
+    driver = load_driver()
 
-            code = match(r"https:\/\/www\.instagram\.com\/p\/(.*)/?", link)[1]
+    if kwargs['scraping_mode'] == "post_list":
 
-            post_df = post_scraper(link)
-            base_df = pd.concat([base_df, post_df])
+        print("Retrieveing post list")
 
-            base_df.to_csv(
-                f"../comments/{now.strftime('%Y%m%d_%H%M%S')}.csv", index=False)
+        with open("posts.txt", "r") as f:
+            post_list = f.read().splitlines()
 
-    print("Exported comments")
+        file_path = get_file_path(timestamp, prefix="posts")
+
+        for post in post_list:
+
+            df = scrape_post(driver, post)
+
+            save_dataframe(df, file_path)
+
+        print(f"Comments exported: {file_path}")
+
+    if kwargs['scraping_mode'] == "dict_scraping":
+
+        print("Getting user list")
+        with open("users.txt", "r") as file:
+            userlist = file.read().splitlines()
+
+        print("Reading master file")
+        posts = posts_from_master(userlist, kwargs["period"])
+
+        print("Scraping posts")
+
+        for post in posts:
+
+            user, link = post
+
+            file_path = get_file_path(timestamp, prefix=user)
+            df = scrape_post(driver, link)
+            save_dataframe(df, file_path)
+
+        print(f"Comments exported")
+
     driver.quit()
+
+
+if __name__ == '__main__':
+
+    default_config = {'scraping_mode': 'dict_scraping',
+                      'period': (0, datetime.timestamp(datetime.now()))}
+
+    main(**default_config)

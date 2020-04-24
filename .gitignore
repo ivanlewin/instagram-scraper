@@ -1,3 +1,6 @@
 */.vscode/
 */__pycache__/
 *.log
+*.csv
+comments/New Microsoft Excel Worksheet.xlsx
+*.json
