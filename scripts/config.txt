@@ -12,8 +12,8 @@ number_of_posts = 1
 
 
 [scraping]
-# post_list / dict_scraping
-scraping_mode = dict_scraping
+# post_list / master_file
+scraping_mode = master_file
 
 
 [period]
