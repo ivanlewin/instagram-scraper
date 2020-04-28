@@ -30,7 +30,7 @@ def load_driver():
 
 
 def scrape_post(driver, post):
-
+    
     def load_comments():
 
         # Load all comments
@@ -50,6 +50,9 @@ def scrape_post(driver, post):
                 '.y3zKF')
 
             for button in view_replies_buttons:
+
+                driver.execute_script("arguments[0].scrollIntoView();", button)
+
                 try:
                     text = driver.execute_script(
                         "return arguments[0].textContent;", button)
@@ -58,6 +61,7 @@ def scrape_post(driver, post):
                         sleep(0.5)
                         text = driver.execute_script(
                             "return arguments[0].textContent;", button)
+                            
                 except StaleElementReferenceException:
                     pass
 
@@ -136,8 +140,7 @@ def scrape_post(driver, post):
     m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/", post_id)
     post_id = m['post_id']
 
-    post_created_at = post_info.find_element_by_css_selector(
-        "._1o9PC").get_attribute('datetime')
+    post_created_at = post_info.find_element_by_css_selector("._1o9PC").get_attribute('datetime')
     m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", post_created_at)
     post_created_at = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
     post_created_at = datetime.strptime(post_created_at, "%Y-%m-%d-%H-%M-%S")
@@ -150,26 +153,32 @@ def scrape_post(driver, post):
         comment_df = get_comment_info(comment)
         post_df = pd.concat([post_df, comment_df])
 
-    post_df["p_id"] = post_id
-    post_df["p_author"] = post_author
-    post_df["p_date"] = post_created_at
-    post_df["p_likes"] = post_likes
-    post_df["p_comments"] = len(post_df.index)
+    try:
+        
+        # Convert dtypes of columns
 
-    # Reorder columns with post info first
-    new_order = list(
-        post_df.columns.values[7:]) + list(post_df.columns.values[:7])
-    post_df = post_df.reindex(columns=new_order)
+            convert_dict = {
+                "p_likes": int,
+                "p_comments": int,
+                "c_id": object,
+                "c_reply_to": object,
+                "c_likes": int,
+            }
 
-    # Convert dtypes of columns
-    convert_dict = {
-        "p_likes": int,
-        "p_comments": int,
-        "c_id": object,
-        "c_reply_to": object,
-        "c_likes": int,
-    }
-    post_df = post_df.astype(convert_dict)
+            post_df = post_df.astype(convert_dict)
+
+            post_df["p_id"] = post_id
+            post_df["p_author"] = post_author
+            post_df["p_date"] = post_created_at
+            post_df["p_likes"] = post_likes
+            post_df["p_comments"] = len(post_df.index)
+
+            # Reorder columns with post info first
+            new_order = list(post_df.columns.values[7:]) + list(post_df.columns.values[:7])
+            post_df = post_df.reindex(columns=new_order)
+
+    except KeyError: # empty post_df
+        pass
 
     return post_df
 
@@ -233,7 +242,7 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
         print(f"Comments exported: {file_path}")
 
-    if kwargs['scraping_mode'] == "dict_scraping":
+    if kwargs['scraping_mode'] == "master_file":
 
         print("Getting user list")
         with open("users.txt", "r") as file:
@@ -259,7 +268,7 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
 if __name__ == '__main__':
 
-    default_config = {'scraping_mode': 'dict_scraping',
+    default_config = {'scraping_mode': 'master_file',
                       'period': (0, datetime.timestamp(datetime.now()))}
 
     main(**default_config)
