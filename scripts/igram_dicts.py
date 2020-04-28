@@ -91,12 +91,17 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
     user, pwd = read_credentials()
 
+    print("Logging in with credentials")
     login_ig(user, pwd)
 
     if kwargs["create_accounts_dict"]:
+
+        print("Creating account dictionaries")
         get_account_dicts(userlist, timestamp)
 
     if kwargs["create_posts_dict"]:
+
+        print("Creating post dictionaries")
         get_media_dicts(userlist, kwargs["number_of_posts"])
 
 
