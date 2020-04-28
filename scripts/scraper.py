@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 from re import match
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 from time import sleep
 
 
@@ -19,12 +19,12 @@ def load_driver():
 
     driver.get('https://www.instagram.com/p/B8o367kgObt/')
 
-    try:
-        close_button = driver.find_element_by_css_selector('.xqRnw')
-        close_button.click()
+    # try:
+    #     close_button = driver.find_element_by_css_selector('.xqRnw')
+    #     close_button.click()
 
-    except NoSuchElementException:
-        pass
+    # except NoSuchElementException:
+    #     pass
 
     return driver
 
@@ -50,13 +50,16 @@ def scrape_post(driver, post):
                 '.y3zKF')
 
             for button in view_replies_buttons:
-                text = driver.execute_script(
-                    "return arguments[0].textContent;", button)
-                while "Ver" in text or "View" in text:
-                    button.click()
-                    sleep(0.5)
+                try:
                     text = driver.execute_script(
                         "return arguments[0].textContent;", button)
+                    while "Ver" in text or "View" in text:
+                        button.click()
+                        sleep(0.5)
+                        text = driver.execute_script(
+                            "return arguments[0].textContent;", button)
+                except StaleElementReferenceException:
+                    pass
 
         except NoSuchElementException:
             pass
