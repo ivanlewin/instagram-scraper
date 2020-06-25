@@ -7,36 +7,47 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 from time import sleep
 
 
-def load_driver(driver="Firefox", existing_profile=False):
+def load_driver(driver="Firefox", existing_profile=False, profile=None):
+    """Loads and returns a webdriver instance.
 
+    Keyword arguments:
+    driver -- which driver you want to use
+        "Chrome" for chromedriver or "Firefox" for geckodriver.
+    existing_profile -- wether you want to use an existing browser profile,
+        which grants access to cookies and other session data.
+    profile -- the path to the profile you want to use.
+        By default it will look into the default profiles_folder for the selected browser
+        and choose the first one, but it may be the case that you want to use another one
+    """
     if driver == "Firefox":
 
         if existing_profile:
-            # Instantiate a driver session with an existing Firefox profile
-            profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
-            profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0]) # Selecting first profile in the folder
+
+            if not profile:
+                profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
+                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0]) # Selecting first profile in the folder
 
             firefox_profile = webdriver.FirefoxProfile(profile_directory=profile)
             driver = webdriver.Firefox(firefox_profile)
         
-        else:
-            driver = webdriver.Firefox()
+        else: driver = webdriver.Firefox()
 
     if driver == "Chrome":
 
         if existing_profile:
 
-            profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data") # Selects Default profile
+            if not profile:
+                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data") # Selects Default profile
 
             options = webdriver.ChromeOptions()
             options.add_argument('user-data-dir=' + profile)
             driver = webdriver.Chrome(chrome_options=options)            
 
-        else:
-            driver = webdriver.Chrome()
+        else: driver = webdriver.Chrome()
     
     return driver
 
+load_driver()
 
 def scrape_post(driver, post):
     
