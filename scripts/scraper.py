@@ -7,25 +7,34 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 from time import sleep
 
 
-def load_driver():
+def load_driver(driver="Firefox", existing_profile=False):
 
-    # Find Firefox Profile
-    profiles_folder = f"{os.environ['appdata']}\Mozilla\Firefox\Profiles"
-    for profile in os.listdir(profiles_folder):
-        if "default-release" in profile:
-            firefox_profile = webdriver.FirefoxProfile(
-                f"{profiles_folder}/{profile}")
+    if driver == "Firefox":
+
+        if existing_profile:
+            # Instantiate a driver session with an existing Firefox profile
+            profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
+            profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0]) # Selecting first profile in the folder
+
+            firefox_profile = webdriver.FirefoxProfile(profile_directory=profile)
             driver = webdriver.Firefox(firefox_profile)
+        
+        else:
+            driver = webdriver.Firefox()
 
-    driver.get('https://www.instagram.com/p/B8o367kgObt/')
+    if driver == "Chrome":
 
-    # try:
-    #     close_button = driver.find_element_by_css_selector('.xqRnw')
-    #     close_button.click()
+        if existing_profile:
 
-    # except NoSuchElementException:
-    #     pass
+            profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data") # Selects Default profile
 
+            options = webdriver.ChromeOptions()
+            options.add_argument('user-data-dir=' + profile)
+            driver = webdriver.Chrome(chrome_options=options)            
+
+        else:
+            driver = webdriver.Chrome()
+    
     return driver
 
 
