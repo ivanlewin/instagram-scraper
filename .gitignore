@@ -1,6 +1,5 @@
-*/.vscode/
-*/__pycache__/
-*.log
-*.csv
-comments/New Microsoft Excel Worksheet.xlsx
-*.json
+geckodriver.log
+comments/**/*.csv
+comments/**/*.xlsx
+dictionaries/**/*.csv
+dictionaries/**/*.json
