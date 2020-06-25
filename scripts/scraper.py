@@ -47,8 +47,6 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
     
     return driver
 
-load_driver()
-
 def scrape_post(driver, post):
     
     def load_comments():
