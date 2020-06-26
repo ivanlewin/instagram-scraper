@@ -115,11 +115,18 @@ def scrape_post(driver, comments=True, replies=True):
         comment_df = pd.DataFrame({
             "c_id": [comment_id],
             "c_reply_id": [comment_reply_id],
-            "c_created_at": [comment_created_at],
             "c_author": [comment_author],
-            "c_likes_count": [comment_likes_count],
             "c_content": [comment_content],
+            "c_likes_count": [comment_likes_count],
+            "c_created_at": [comment_created_at],
         })
+
+        # convert_dict = {
+        #     "c_id": object,
+        #     "c_reply_id": object,
+        # }
+
+        # comment_df = comment_df.astype(convert_dict)
 
         return comment_df
 
@@ -149,44 +156,30 @@ def scrape_post(driver, comments=True, replies=True):
             post_likes_count = int(post_likes_count.replace(",", ""))
         except NoSuchElementException:
             pass
+    
+    try:
+        post_df["p_id"] = [post_id]
+        post_df["p_author"] = [post_author]
+        post_df["p_likes_count"] = [post_likes_count]
+        post_df["p_created_at"] = [post_created_at]
+            
+    except KeyError: # empty post_df
+            pass
 
     if comments:
         load_comments()
         if replies:
             load_replies()
 
+        comments_df = pd.DataFrame()
+
         for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc div.C4VMK'):
             driver.execute_script("arguments[0].scrollIntoView();", comment)
             comment_df = get_comment_info(comment)
-            post_df = pd.concat([post_df, comment_df])
+            comments_df = pd.concat([comments_df, comment_df])
 
-        post_comments_count = len(post_df.index)
-
-    
-    try:
-        # Convert dtypes of columns
-        convert_dict = {
-            "p_likes_count": int,
-            "p_comments_count": int,
-            "c_id": object,
-            "c_reply_to": object,
-            "c_likes": int,
-        }
-
-        post_df = post_df.astype(convert_dict)
-
-        post_df["p_id"] = post_id
-        post_df["p_author"] = post_author
-        post_df["p_likes_count"] = post_likes_count
-        post_df["p_comments_count"] = post_comments_count
-        post_df["p_created_at"] = post_created_at
-
-        # Reorder columns with post info first
-        new_order = list(post_df.columns.values[7:]) + list(post_df.columns.values[:7])
-        post_df = post_df.reindex(columns=new_order)
-
-    except KeyError: # empty post_df
-        pass
+        post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
+        post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
 
     return post_df
 
@@ -248,7 +241,7 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
             driver.get(post)
             sleep(2)
-            df = scrape_post(driver, post)
+            df = scrape_post(driver)
 
             save_dataframe(df, file_path)
 
@@ -281,6 +274,6 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 if __name__ == '__main__':
 
     default_config = {'scraping_mode': 'master_file',
-                      'period': (0, datetime.timestamp(datetime.now()))}
+    'period': (0, datetime.timestamp(datetime.now()))}
 
-    main(**default_config)
+    # main(**default_config)
