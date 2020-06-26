@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+from pandas.errors import EmptyDataError
 from datetime import datetime
 from re import match
 from selenium import webdriver
@@ -197,13 +198,15 @@ def save_dataframe(df, path):
         new_df = pd.concat([base_df, df])
         new_df.to_csv(path, index=False)
 
-    except (FileNotFoundError):
+    except (FileNotFoundError, EmptyDataError):
         df.to_csv(path, index=False)
 
 
 def get_file_path(timestamp, prefix):
 
     comments_folder = os.path.abspath("../comments")
+    if not os.path.exists(comments_folder):
+        os.mkdir(comments_folder)
     filename = f"{prefix}_{timestamp}.csv"
     file_path = os.path.join(comments_folder, filename)
 
