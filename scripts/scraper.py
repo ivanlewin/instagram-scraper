@@ -84,107 +84,105 @@ def scrape_post(driver, comments=True, replies=True):
 
     def get_comment_info(comment):
 
-        c_author = comment.find_element_by_css_selector('h3 a').text
-
-        content = comment.find_element_by_css_selector('.C4VMK span').text
-
-        info = comment.find_element_by_css_selector('.aGBdT > div')
-
-        likes = info.find_element_by_css_selector('button.FH9sR')
-        m = match(r"(\d+)", likes.text)
-        likes = info.find_element_by_css_selector('button.FH9sR').text
-        m = match(r"(\d+)", likes)
-
-        if m:
-            c_like_count = int(m[0])
-        else:
-
-        permalink = info.find_element_by_css_selector('a')
-        m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute('href'))
-        comment_id = m[1]
-        reply_to = m[2]
+        comment_id = comment_reply_to = comment_created_at = comment_author = comment_content = comment_likes_count = None
 
         try:
-            c_created_at = info.find_element_by_tag_name('time').get_attribute('datetime')
-            c_created_at = datetime.strptime(c_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
-            # c_created_at = datetime.timestamp(c_created_at)
-        except NoSuchElementException:
-                post_created_at = None
+            comment_author = comment.find_element_by_css_selector('h3 a').text
+            comment_content = comment.find_element_by_css_selector('.C4VMK span').text
 
+            info = comment.find_element_by_css_selector('.aGBdT > div')
+            
+            permalink = info.find_element_by_css_selector('a')
+            m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute('href'))
+            comment_id = m[1]
+            comment_reply_to = m[2]
+
+            comment_created_at = info.find_element_by_tag_name('time').get_attribute('datetime')
+            comment_created_at = datetime.strptime(comment_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
+            # comment_created_at = datetime.timestamp(comment_created_at)
+
+            likes = info.find_element_by_css_selector('button.FH9sR').text
+            m = match(r"(\d+)", likes)
+            if m:
+                comment_likes = int(m[0])
+            else:
+                comment_likes = 0
+
+        except NoSuchElementException:
+            pass
 
         comment_df = pd.DataFrame({
             "c_id": [comment_id],
-            "c_reply_to": [reply_to],
-            "c_date": [c_created_at],
-            "c_author": [c_author],
-            "c_content": [content],
-            "c_likes": [like_count],
-            "c_likes": [c_like_count],
-            "c_permalink": [permalink]
+            "c_reply_to": [comment_reply_to],
+            "c_created_at": [comment_created_at],
+            "c_author": [comment_author],
+            "c_likes": [comment_likes],
+            "c_content": [comment_content],
         })
 
         return comment_df
 
+    post_id = post_created_at = post_author = post_likes_count = post_comments_count = None
+
     post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
-
-    try:
-        post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
-    except NoSuchElementException:
-        post_author = None
-
-    try:
-        post_likes = driver.find_element_by_css_selector(".Nm9Fw span").text
-        post_likes = int(post_likes.replace(",", ""))
-    except NoSuchElementException:
-        # On video posts, you have to click the 'views count' span for the likes count to appear
-        try:
-            driver.find_element_by_css_selector(".vcOH2").click()
-            post_likes = driver.find_element_by_css_selector(".vJRqr span").text
-            post_likes = int(post_likes.replace(",", ""))
-        except NoSuchElementException:
-            post_likes = None
 
     try:
         post_created_at = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute('datetime')
         post_created_at = datetime.strptime(post_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
         # post_created_at = datetime.timestamp(post_created_at)
-    except NoSuchElementException:
-        post_created_at = None
 
-    post_df = pd.DataFrame()
+        post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
+    
+    except NoSuchElementException:
+        pass
+
+    try:
+        post_likes_count = driver.find_element_by_css_selector(".Nm9Fw span").text
+        post_likes_count = int(post_likes_count.replace(",", ""))
+    except NoSuchElementException:
+        # On video posts, you have to click the 'views count' span for the likes count to appear
+        try:
+            driver.find_element_by_css_selector(".vcOH2").click()
+            post_likes_count = driver.find_element_by_css_selector(".vJRqr span").text
+            post_likes_count = int(post_likes_count.replace(",", ""))
+        except NoSuchElementException:
+            pass
 
     if comments:
         load_comments()
         if replies:
             load_replies()
+
         for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc div.C4VMK'):
             driver.execute_script("arguments[0].scrollIntoView();", comment)
             comment_df = get_comment_info(comment)
             post_df = pd.concat([post_df, comment_df])
 
+        post_comments_count = len(post_df.index)
+
     try:
-        
+        post_df = pd.DataFrame()
+
         # Convert dtypes of columns
+        convert_dict = {
+            "p_likes_count": int,
+            "p_comments_count": int,
+            "c_id": object,
+            "c_reply_to": object,
+            "c_likes": int,
+        }
 
-            convert_dict = {
-                "p_likes": int,
-                "p_comments": int,
-                "c_id": object,
-                "c_reply_to": object,
-                "c_likes": int,
-            }
+        post_df = post_df.astype(convert_dict)
 
-            post_df = post_df.astype(convert_dict)
+        post_df["p_id"] = post_id
+        post_df["p_author"] = post_author
+        post_df["p_likes_count"] = post_likes_count
+        post_df["p_comments_count"] = post_comments_count
+        post_df["p_created_at"] = post_created_at
 
-            post_df["p_id"] = post_id
-            post_df["p_author"] = post_author
-            post_df["p_date"] = post_created_at
-            post_df["p_likes"] = post_likes
-            post_df["p_comments"] = len(post_df.index)
-
-            # Reorder columns with post info first
-            new_order = list(post_df.columns.values[7:]) + list(post_df.columns.values[:7])
-            post_df = post_df.reindex(columns=new_order)
+        # Reorder columns with post info first
+        new_order = list(post_df.columns.values[7:]) + list(post_df.columns.values[:7])
+        post_df = post_df.reindex(columns=new_order)
 
     except KeyError: # empty post_df
         pass
