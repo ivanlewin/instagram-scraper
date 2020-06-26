@@ -192,7 +192,7 @@ def save_dataframe(df, path):
 
 def get_file_path(timestamp, prefix):
 
-    comments_folder = os.path.abspath("../comments")
+    comments_folder = os.path.abspath("./comments")
     if not os.path.exists(comments_folder):
         os.mkdir(comments_folder)
     filename = f"{prefix}_{timestamp}.csv"
