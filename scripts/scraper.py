@@ -66,16 +66,14 @@ def scrape_post(driver, comments=True, replies=True):
 
             for button in view_replies_buttons:
 
-                driver.execute_script("arguments[0].scrollIntoView();", button)
-
                 try:
-                    text = driver.execute_script(
-                        "return arguments[0].textContent;", button)
+                    driver.execute_script("arguments[0].scrollIntoView();", button)
+
+                    text = button.text
                     while "Ver" in text or "View" in text:
                         button.click()
                         sleep(0.5)
-                        text = driver.execute_script(
-                            "return arguments[0].textContent;", button)
+                        text = button.text
                             
                 except StaleElementReferenceException:
                     pass
