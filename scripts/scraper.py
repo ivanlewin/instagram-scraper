@@ -122,6 +122,8 @@ def scrape_post(driver, comments=True, replies=True):
 
         return comment_df
 
+    post_df = pd.DataFrame()
+
     post_id = post_created_at = post_author = post_likes_count = post_comments_count = None
 
     post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
@@ -132,7 +134,6 @@ def scrape_post(driver, comments=True, replies=True):
         # post_created_at = datetime.timestamp(post_created_at)
 
         post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
-    
     except NoSuchElementException:
         pass
 
@@ -160,9 +161,8 @@ def scrape_post(driver, comments=True, replies=True):
 
         post_comments_count = len(post_df.index)
 
+    
     try:
-        post_df = pd.DataFrame()
-
         # Convert dtypes of columns
         convert_dict = {
             "p_likes_count": int,
