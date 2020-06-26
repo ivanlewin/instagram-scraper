@@ -124,10 +124,20 @@ def scrape_post(driver, comments=True, replies=True):
         return comment_df
 
     post_df = pd.DataFrame()
-
-    post_id = post_created_at = post_author = post_likes_count = post_comments_count = None
+    post_id = post_author = post_likes_count = post_media_type = post_created_at = None
 
     post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
+
+    try:
+        if driver.find_elements_by_css_selector("._97aPb > .ZyFrc"):
+            post_media_type = "IMAGE"
+        elif driver.find_elements_by_css_selector("._97aPb > div > .kPFhm"):
+            post_media_type = "VIDEO"
+        elif driver.find_elements_by_css_selector("._97aPb > .rQDP3"):
+            post_media_type = "CAROUSEL_ALBUM"
+    except NoSuchElementException:
+        pass
+        
 
     try:
         post_created_at = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute("datetime")
@@ -156,6 +166,7 @@ def scrape_post(driver, comments=True, replies=True):
         post_df["p_id"] = [post_id]
         post_df["p_author"] = [post_author]
         post_df["p_likes_count"] = [post_likes_count]
+        post_df["p_media_type"] = [post_media_type]
         post_df["p_created_at"] = [post_created_at]
             
     except KeyError: # empty post_df
