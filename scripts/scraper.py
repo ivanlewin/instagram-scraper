@@ -154,6 +154,8 @@ def scrape_post(driver, comments=True, replies=True):
             driver.find_element_by_css_selector(".vcOH2").click()
             post_likes_count = driver.find_element_by_css_selector(".vJRqr span").text
             post_likes_count = int(post_likes_count.replace(",", ""))
+            
+            driver.find_element_by_css_selector(".QhbhU").click() # click out of the views_count pop-up
         except NoSuchElementException:
             pass
     
