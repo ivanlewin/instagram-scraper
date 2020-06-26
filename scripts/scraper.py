@@ -90,11 +90,10 @@ def scrape_post(driver, comments=True, replies=True):
 
         info = comment.find_element_by_css_selector('.aGBdT > div')
 
-        likes = info.find_element_by_css_selector(
-            'div > button:nth-of-type(1)')
+        likes = info.find_element_by_css_selector('button.FH9sR')
         m = match(r"(\d+)", likes.text)
         if m:
-            like_count = m[0]
+            c_like_count = int(m[0])
         else:
             like_count = 0
 
