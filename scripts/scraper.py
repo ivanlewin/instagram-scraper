@@ -105,19 +105,19 @@ def scrape_post(driver, comments=True, replies=True):
             likes = info.find_element_by_css_selector('button.FH9sR').text
             m = match(r"(\d+)", likes)
             if m:
-                comment_likes = int(m[0])
+                comment_likes_count = int(m[0])
             else:
-                comment_likes = 0
+                comment_likes_count = 0
 
         except NoSuchElementException:
             pass
 
         comment_df = pd.DataFrame({
             "c_id": [comment_id],
-            "c_reply_to": [comment_reply_to],
+            "c_reply_id": [comment_reply_id],
             "c_created_at": [comment_created_at],
             "c_author": [comment_author],
-            "c_likes": [comment_likes],
+            "c_likes_count": [comment_likes_count],
             "c_content": [comment_content],
         })
 
