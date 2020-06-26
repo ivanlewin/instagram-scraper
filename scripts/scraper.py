@@ -100,14 +100,9 @@ def scrape_post(driver, comments=True, replies=True):
         else:
 
         permalink = info.find_element_by_css_selector('a')
-        m = match(r"https:\/\/www\.instagram\.com\/p\/(?:.+)\/c\/(?P<c>\d+)\/(r\/(?P<r>\d+)\/)?", permalink.get_attribute('href'))
-
-        if m['r']:
-            comment_id = m['r']
-            reply_to = m['c']
-        else:
-            comment_id = m['c']
-            reply_to = None
+        m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute('href'))
+        comment_id = m[1]
+        reply_to = m[2]
 
         try:
             c_created_at = info.find_element_by_tag_name('time').get_attribute('datetime')
