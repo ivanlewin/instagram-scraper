@@ -98,18 +98,8 @@ def scrape_post(driver, comments=True, replies=True):
         else:
             like_count = 0
 
-        comment_date = info.find_element_by_css_selector(
-            'time').get_attribute('datetime')
-        m = match(
-            r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", comment_date)
-        comment_date = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
-        comment_date = datetime.strptime(comment_date, "%Y-%m-%d-%H-%M-%S")
-        comment_date = datetime.timestamp(comment_date)
-
-        permalink = info.find_element_by_css_selector(
-            '.gU-I7').get_attribute('href')
-        m = match(
-            r"https:\/\/www\.instagram\.com\/p\/(?:.+)\/c\/(?P<c>\d+)\/(r\/(?P<r>\d+)\/)?", permalink)
+        permalink = info.find_element_by_css_selector('a')
+        m = match(r"https:\/\/www\.instagram\.com\/p\/(?:.+)\/c\/(?P<c>\d+)\/(r\/(?P<r>\d+)\/)?", permalink.get_attribute('href'))
 
         if m['r']:
             comment_id = m['r']
@@ -118,10 +108,18 @@ def scrape_post(driver, comments=True, replies=True):
             comment_id = m['c']
             reply_to = None
 
+        try:
+            c_created_at = info.find_element_by_tag_name('time').get_attribute('datetime')
+            c_created_at = datetime.strptime(c_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
+            # c_created_at = datetime.timestamp(c_created_at)
+        except NoSuchElementException:
+                post_created_at = None
+
+
         comment_df = pd.DataFrame({
             "c_id": [comment_id],
             "c_reply_to": [reply_to],
-            "c_date": [comment_date],
+            "c_date": [c_created_at],
             "c_author": [c_author],
             "c_content": [content],
             "c_likes": [like_count],
