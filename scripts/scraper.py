@@ -88,7 +88,7 @@ def scrape_post(driver, comments=True, replies=True):
 
         content = comment.find_element_by_css_selector('.C4VMK span').text
 
-        info = comment.find_element_by_css_selector('.aGBdT')
+        info = comment.find_element_by_css_selector('.aGBdT > div')
 
         likes = info.find_element_by_css_selector(
             'div > button:nth-of-type(1)')
@@ -160,7 +160,7 @@ def scrape_post(driver, comments=True, replies=True):
         load_comments()
         if replies:
             load_replies()
-        for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc .C4VMK'):
+        for comment in driver.find_elements_by_css_selector('ul.Mr508 > div.ZyFrc div.C4VMK'):
             driver.execute_script("arguments[0].scrollIntoView();", comment)
             comment_df = get_comment_info(comment)
             post_df = pd.concat([post_df, comment_df])
