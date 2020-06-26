@@ -41,7 +41,7 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
                 profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data") # Selects Default profile
 
             options = webdriver.ChromeOptions()
-            options.add_argument('user-data-dir=' + profile)
+            options.add_argument("user-data-dir=" + profile)
             driver = webdriver.Chrome(chrome_options=options)            
 
         else: driver = webdriver.Chrome()
@@ -51,10 +51,10 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
 def scrape_post(driver, comments=True, replies=True):
     
     def load_comments():
-        """Clicks the 'Load more comments' button until there are no more comments."""
+        """Clicks the "Load more comments" button until there are no more comments."""
         while True:
             try:            
-                load_more_comments = driver.find_element_by_css_selector('button.dCJp8')
+                load_more_comments = driver.find_element_by_css_selector("button.dCJp8")
                 load_more_comments.click()
                 sleep(2)
             except NoSuchElementException:
@@ -62,7 +62,7 @@ def scrape_post(driver, comments=True, replies=True):
 
     def load_replies():
         try:
-            view_replies_buttons = driver.find_elements_by_css_selector('.y3zKF')
+            view_replies_buttons = driver.find_elements_by_css_selector(".y3zKF")
 
             for button in view_replies_buttons:
 
@@ -86,21 +86,21 @@ def scrape_post(driver, comments=True, replies=True):
         comment_id = comment_reply_id = comment_created_at = comment_author = comment_content = comment_likes_count = None
 
         try:
-            comment_author = comment.find_element_by_css_selector('h3 a').text
-            comment_content = comment.find_element_by_css_selector('span:not([class*="coreSpriteVerifiedBadgeSmall"])').text
+            comment_author = comment.find_element_by_css_selector("h3 a").text
+            comment_content = comment.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text
 
-            info = comment.find_element_by_css_selector('.aGBdT > div')
+            info = comment.find_element_by_css_selector(".aGBdT > div")
             
-            permalink = info.find_element_by_css_selector('a')
-            m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute('href'))
+            permalink = info.find_element_by_css_selector("a")
+            m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute("href"))
             comment_id = m[1]
             comment_reply_id = m[2]
 
-            comment_created_at = info.find_element_by_tag_name('time').get_attribute('datetime')
+            comment_created_at = info.find_element_by_tag_name("time").get_attribute("datetime")
             comment_created_at = datetime.strptime(comment_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
             # comment_created_at = datetime.timestamp(comment_created_at)
 
-            likes = info.find_element_by_css_selector('button.FH9sR').text
+            likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
             if m:
                 comment_likes_count = int(m[0])
@@ -130,7 +130,7 @@ def scrape_post(driver, comments=True, replies=True):
     post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
     try:
-        post_created_at = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute('datetime')
+        post_created_at = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute("datetime")
         post_created_at = datetime.strptime(post_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
         # post_created_at = datetime.timestamp(post_created_at)
 
@@ -142,7 +142,7 @@ def scrape_post(driver, comments=True, replies=True):
         post_likes_count = driver.find_element_by_css_selector(".Nm9Fw span").text
         post_likes_count = int(post_likes_count.replace(",", ""))
     except NoSuchElementException:
-        # On video posts, you have to click the 'views count' span for the likes count to appear
+        # On video posts, you have to click the "views count" span for the likes count to appear
         try:
             driver.find_element_by_css_selector(".vcOH2").click()
             post_likes_count = driver.find_element_by_css_selector(".vJRqr span").text
@@ -168,7 +168,7 @@ def scrape_post(driver, comments=True, replies=True):
 
         comments_df = pd.DataFrame()
 
-        for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc div.C4VMK'):
+        for comment in driver.find_elements_by_css_selector("ul.Mr508 div.ZyFrc div.C4VMK"):
             driver.execute_script("arguments[0].scrollIntoView();", comment)
             comment_df = get_comment_info(comment)
             comments_df = pd.concat([comments_df, comment_df])
@@ -208,8 +208,8 @@ def posts_from_master(userlist, period):
 
     since_ts, until_ts = period
 
-    filtered_df = master_df.loc[master_df['p_author'].isin(userlist)]
-    filtered_df = filtered_df[filtered_df['p_date'].between(
+    filtered_df = master_df.loc[master_df["p_author"].isin(userlist)]
+    filtered_df = filtered_df[filtered_df["p_date"].between(
         since_ts, until_ts)]
 
     filtered_df = filtered_df.drop(columns=["p_id", "p_date"])
@@ -219,11 +219,11 @@ def posts_from_master(userlist, period):
     return posts
 
 
-def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
+def main(timestamp=datetime.now().strftime(r"%Y%m%d-%H%M%S"), **kwargs):
 
     driver = load_driver()
 
-    if kwargs['scraping_mode'] == "post_list":
+    if kwargs["scraping_mode"] == "post_list":
 
         print("Retrieveing post list")
 
@@ -242,7 +242,7 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
         print(f"Comments exported: {file_path}")
 
-    if kwargs['scraping_mode'] == "master_file":
+    if kwargs["scraping_mode"] == "master_file":
 
         print("Getting user list")
         with open("users.txt", "r") as file:
@@ -266,9 +266,9 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
     driver.quit()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    default_config = {'scraping_mode': 'master_file',
-    'period': (0, datetime.timestamp(datetime.now()))}
+    default_config = {"scraping_mode": "master_file",
+    "period": (0, datetime.timestamp(datetime.now()))}
 
     # main(**default_config)
