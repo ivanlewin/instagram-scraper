@@ -85,7 +85,7 @@ def scrape_post(driver, comments=True, replies=True):
 
     def get_comment_info(comment):
 
-        comment_id = comment_reply_to = comment_created_at = comment_author = comment_content = comment_likes_count = None
+        comment_id = comment_reply_id = comment_created_at = comment_author = comment_content = comment_likes_count = None
 
         try:
             comment_author = comment.find_element_by_css_selector('h3 a').text
@@ -96,7 +96,7 @@ def scrape_post(driver, comments=True, replies=True):
             permalink = info.find_element_by_css_selector('a')
             m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute('href'))
             comment_id = m[1]
-            comment_reply_to = m[2]
+            comment_reply_id = m[2]
 
             comment_created_at = info.find_element_by_tag_name('time').get_attribute('datetime')
             comment_created_at = datetime.strptime(comment_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
