@@ -84,12 +84,9 @@ def scrape_post(driver, comments=True, replies=True):
 
     def get_comment_info(comment):
 
+        c_author = comment.find_element_by_css_selector('h3 a').text
 
-        user = comment.find_element_by_css_selector('h3 a').text
-
-        content = comment.find_element_by_css_selector('.C4VMK span')
-        content = driver.execute_script(
-            "return arguments[0].textContent;", content)
+        content = comment.find_element_by_css_selector('.C4VMK span').text
 
         info = comment.find_element_by_css_selector('.aGBdT')
 
@@ -125,7 +122,7 @@ def scrape_post(driver, comments=True, replies=True):
             "c_id": [comment_id],
             "c_reply_to": [reply_to],
             "c_date": [comment_date],
-            "c_user": [user],
+            "c_author": [c_author],
             "c_content": [content],
             "c_likes": [like_count],
             "c_permalink": [permalink]
