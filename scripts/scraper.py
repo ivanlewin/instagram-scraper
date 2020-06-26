@@ -88,7 +88,7 @@ def scrape_post(driver, comments=True, replies=True):
 
         try:
             comment_author = comment.find_element_by_css_selector('h3 a').text
-            comment_content = comment.find_element_by_css_selector('.C4VMK span').text
+            comment_content = comment.find_element_by_css_selector('span:not([class*="coreSpriteVerifiedBadgeSmall"])').text
 
             info = comment.find_element_by_css_selector('.aGBdT > div')
             
