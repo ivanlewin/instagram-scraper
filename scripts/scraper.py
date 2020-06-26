@@ -17,7 +17,7 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
         which grants access to cookies and other session data.
     profile -- the path to the profile you want to use.
         By default it will look into the default profiles_folder for the selected browser
-        and choose the first one, but it may be the case that you want to use another one
+        and choose the first one, but it may be the case that you want to use another one.
     """
     if driver == "Firefox":
 
@@ -47,25 +47,21 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
     
     return driver
 
-def scrape_post(driver, post):
+def scrape_post(driver, comments=True, replies=True):
     
     def load_comments():
-
-        # Load all comments
-        try:
-            while True:
-                load_more_comments = driver.find_element_by_css_selector(
-                    '.MGdpg > button')
+        """Clicks the 'Load more comments' button until there are no more comments."""
+        while True:
+            try:            
+                load_more_comments = driver.find_element_by_css_selector('button.dCJp8')
                 load_more_comments.click()
                 sleep(2)
+            except NoSuchElementException:
+                break
 
-        except NoSuchElementException:
-            pass
-
-        # Load replies to comments
+    def load_replies():
         try:
-            view_replies_buttons = driver.find_elements_by_css_selector(
-                '.y3zKF')
+            view_replies_buttons = driver.find_elements_by_css_selector('.y3zKF')
 
             for button in view_replies_buttons:
 
@@ -138,33 +134,41 @@ def scrape_post(driver, post):
 
         return comment_df
 
-    driver.get(post)
-    sleep(2)
-    load_comments()
-
-    post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
+    try:
+        post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
+    except NoSuchElementException:
+        post_author = None
 
     try:
         post_likes = driver.find_element_by_css_selector(".Nm9Fw span").text
+        post_likes = post_likes.replace(",", "")
     except NoSuchElementException:
-        driver.find_element_by_css_selector(".vcOH2").click()
-        post_likes = driver.find_element_by_css_selector(".vJRqr span").text
+        try:
+            driver.find_element_by_css_selector(".vcOH2").click()
+            post_likes = driver.find_element_by_css_selector(".vJRqr span").text
+            post_likes = post_likes.replace(",", "")
+        except NoSuchElementException:
+            post_likes = None
 
-    post_likes = post_likes.replace(",", "")
+    try:
+        post_info = driver.find_element_by_css_selector(".c-Yi7")
 
-    post_info = driver.find_element_by_css_selector(".c-Yi7")
+        post_id = post_info.get_attribute('href')
+        m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/", post_id)
+        post_id = m['post_id']
 
-    post_id = post_info.get_attribute('href')
-    m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/", post_id)
-    post_id = m['post_id']
-
-    post_created_at = post_info.find_element_by_css_selector("._1o9PC").get_attribute('datetime')
-    m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", post_created_at)
-    post_created_at = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
-    post_created_at = datetime.strptime(post_created_at, "%Y-%m-%d-%H-%M-%S")
-    post_created_at = datetime.timestamp(post_created_at)
+        post_created_at = post_info.find_element_by_tag_name("time").get_attribute('datetime')
+        m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", post_created_at)
+        post_created_at = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
+        post_created_at = datetime.strptime(post_created_at, "%Y-%m-%d-%H-%M-%S")
+        post_created_at = datetime.timestamp(post_created_at)
 
     post_df = pd.DataFrame()
+
+    if comments:
+        load_comments()
+        if replies:
+            load_replies()
 
     for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc'):
 
@@ -254,6 +258,8 @@ def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
 
         for post in post_list:
 
+            driver.get(post)
+            sleep(2)
             df = scrape_post(driver, post)
 
             save_dataframe(df, file_path)
