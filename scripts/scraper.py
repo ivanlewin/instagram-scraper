@@ -158,10 +158,11 @@ def scrape_post(driver, comments=True, replies=True):
         post_id = m['post_id']
 
         post_created_at = post_info.find_element_by_tag_name("time").get_attribute('datetime')
-        m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", post_created_at)
-        post_created_at = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
-        post_created_at = datetime.strptime(post_created_at, "%Y-%m-%d-%H-%M-%S")
+        post_created_at = datetime.strptime(post_created_at, "%Y-%m-%dT%H:%M:%S.%fZ")
         post_created_at = datetime.timestamp(post_created_at)
+
+    except NoSuchElementException:
+        pass
 
     post_df = pd.DataFrame()
 
