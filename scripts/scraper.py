@@ -134,6 +134,8 @@ def scrape_post(driver, comments=True, replies=True):
 
         return comment_df
 
+    post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url).group(1)
+
     try:
         post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
     except NoSuchElementException:
@@ -141,28 +143,22 @@ def scrape_post(driver, comments=True, replies=True):
 
     try:
         post_likes = driver.find_element_by_css_selector(".Nm9Fw span").text
-        post_likes = post_likes.replace(",", "")
+        post_likes = int(post_likes.replace(",", ""))
     except NoSuchElementException:
+        # On video posts, you have to click the 'views count' span for the likes count to appear
         try:
             driver.find_element_by_css_selector(".vcOH2").click()
             post_likes = driver.find_element_by_css_selector(".vJRqr span").text
-            post_likes = post_likes.replace(",", "")
+            post_likes = int(post_likes.replace(",", ""))
         except NoSuchElementException:
             post_likes = None
 
     try:
-        post_info = driver.find_element_by_css_selector(".c-Yi7")
-
-        post_id = post_info.get_attribute('href')
-        m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/", post_id)
-        post_id = m['post_id']
-
-        post_created_at = post_info.find_element_by_tag_name("time").get_attribute('datetime')
-        post_created_at = datetime.strptime(post_created_at, "%Y-%m-%dT%H:%M:%S.%fZ")
-        post_created_at = datetime.timestamp(post_created_at)
-
+        post_created_at = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute('datetime')
+        post_created_at = datetime.strptime(post_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
+        # post_created_at = datetime.timestamp(post_created_at)
     except NoSuchElementException:
-        pass
+        post_created_at = None
 
     post_df = pd.DataFrame()
 
