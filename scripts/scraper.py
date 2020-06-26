@@ -121,12 +121,7 @@ def scrape_post(driver, comments=True, replies=True):
             "c_created_at": [comment_created_at],
         })
 
-        # convert_dict = {
-        #     "c_id": object,
-        #     "c_reply_id": object,
-        # }
-
-        # comment_df = comment_df.astype(convert_dict)
+        comment_df = comment_df.astype({"c_id": object,"c_reply_id": object,})
 
         return comment_df
 
