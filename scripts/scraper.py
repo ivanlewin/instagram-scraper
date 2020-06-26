@@ -4,7 +4,7 @@ from pandas.errors import EmptyDataError
 from datetime import datetime
 from re import match
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 from time import sleep
 
 
@@ -78,7 +78,7 @@ def scrape_post(driver, comments=True, replies=True):
                 except StaleElementReferenceException:
                     pass
 
-        except NoSuchElementException:
+        except (NoSuchElementException, ElementClickInterceptedException):
             pass
 
     def get_comment_info(comment):
