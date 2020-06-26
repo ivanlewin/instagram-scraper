@@ -92,10 +92,12 @@ def scrape_post(driver, comments=True, replies=True):
 
         likes = info.find_element_by_css_selector('button.FH9sR')
         m = match(r"(\d+)", likes.text)
+        likes = info.find_element_by_css_selector('button.FH9sR').text
+        m = match(r"(\d+)", likes)
+
         if m:
             c_like_count = int(m[0])
         else:
-            like_count = 0
 
         permalink = info.find_element_by_css_selector('a')
         m = match(r"https:\/\/www\.instagram\.com\/p\/(?:.+)\/c\/(?P<c>\d+)\/(r\/(?P<r>\d+)\/)?", permalink.get_attribute('href'))
@@ -122,12 +124,13 @@ def scrape_post(driver, comments=True, replies=True):
             "c_author": [c_author],
             "c_content": [content],
             "c_likes": [like_count],
+            "c_likes": [c_like_count],
             "c_permalink": [permalink]
         })
 
         return comment_df
 
-    post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url).group(1)
+    post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
     try:
         post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
