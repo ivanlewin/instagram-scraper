@@ -191,20 +191,24 @@ def scrape_post(driver, comments=True, replies=True):
     except KeyError: # empty post_df
             pass
 
-    if comments:
-        load_comments()
-        if replies:
-            load_replies()
+    try:
+        if comments:
+            load_comments()
+            if replies:
+                load_replies()
 
-        comments_df = pd.DataFrame()
+            comments_df = pd.DataFrame()
 
-        for comment in driver.find_elements_by_css_selector("ul.Mr508 div.ZyFrc div.C4VMK"):
-            driver.execute_script("arguments[0].scrollIntoView();", comment)
-            comment_df = get_comment_info(comment)
-            comments_df = pd.concat([comments_df, comment_df])
+            for comment in driver.find_elements_by_css_selector("ul.Mr508 div.ZyFrc div.C4VMK"):
+                driver.execute_script("arguments[0].scrollIntoView();", comment)
+                comment_df = get_comment_info(comment)
+                comments_df = pd.concat([comments_df, comment_df])
 
-        post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
-        post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
+            post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
+            post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
+    
+    except ValueError: # empty df
+        pass
 
     return post_df
 
