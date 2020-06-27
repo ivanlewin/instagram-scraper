@@ -83,11 +83,11 @@ def scrape_post(driver, comments=True, replies=True):
 
     def get_comment_info(comment):
 
-        comment_id = comment_reply_id = comment_created_at = comment_author = comment_content = comment_likes_count = None
+        comment_id = comment_parent_id = comment_timestamp = comment_username = comment_text = comment_like_count = None
 
         try:
-            comment_author = comment.find_element_by_css_selector("h3 a").text
-            comment_content = comment.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text
+            comment_username = comment.find_element_by_css_selector("h3 a").text
+            comment_text = comment.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text
 
             info = comment.find_element_by_css_selector(".aGBdT > div")
             
@@ -103,20 +103,20 @@ def scrape_post(driver, comments=True, replies=True):
             likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
             if m:
-                comment_likes_count = int(m[0])
+                comment_like_count = int(m[0])
             else:
-                comment_likes_count = 0
+                comment_like_count = 0
 
         except NoSuchElementException:
             pass
 
         comment_df = pd.DataFrame({
             "c_id": [comment_id],
-            "c_reply_id": [comment_reply_id],
-            "c_author": [comment_author],
-            "c_content": [comment_content],
-            "c_likes_count": [comment_likes_count],
-            "c_created_at": [comment_created_at],
+            "c_reply_id": [comment_parent_id],
+            "c_username": [comment_username],
+            "c_text": [comment_text],
+            "c_like_count": [comment_like_count],
+            "c_timestamp": [comment_timestamp],
         })
 
         comment_df = comment_df.astype({"c_id": object,"c_reply_id": object,})
@@ -124,9 +124,9 @@ def scrape_post(driver, comments=True, replies=True):
         return comment_df
 
     post_df = pd.DataFrame()
-    post_id = post_author = post_likes_count = post_media_type = post_created_at = None
+    post_shortcode = post_username = post_like_count = post_media_type = post_timestamp = None
 
-    post_id = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
+    post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
     try:
         if driver.find_elements_by_css_selector("._97aPb > .ZyFrc"):
@@ -140,34 +140,37 @@ def scrape_post(driver, comments=True, replies=True):
         
 
     try:
-        post_created_at = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute("datetime")
-        post_created_at = datetime.strptime(post_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
-        # post_created_at = datetime.timestamp(post_created_at)
+        post_timestamp = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute("datetime")
+        post_timestamp = datetime.strptime(post_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
+        # post_timestamp = datetime.timestamp(post_timestamp)
 
-        post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
+        post_username = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
     except NoSuchElementException:
         pass
 
     try:
-        post_likes_count = driver.find_element_by_css_selector(".Nm9Fw span").text
-        post_likes_count = int(post_likes_count.replace(",", ""))
+        post_like_count = driver.find_element_by_css_selector(".Nm9Fw span").text
+        post_like_count = int(post_like_count.replace(",", ""))
     except NoSuchElementException:
         # On video posts, you have to click the "views count" span for the likes count to appear
         try:
             driver.find_element_by_css_selector(".vcOH2").click()
-            post_likes_count = driver.find_element_by_css_selector(".vJRqr span").text
-            post_likes_count = int(post_likes_count.replace(",", ""))
+            post_like_count = driver.find_element_by_css_selector(".vJRqr span").text
+            post_like_count = int(post_like_count.replace(",", ""))
             
             driver.find_element_by_css_selector(".QhbhU").click() # click out of the views_count pop-up
         except NoSuchElementException:
             pass
     
     try:
-        post_df["p_id"] = [post_id]
-        post_df["p_author"] = [post_author]
-        post_df["p_likes_count"] = [post_likes_count]
+        # post_df["p_caption"] = [post_caption]
+        post_df["p_shortcode"] = [post_shortcode]
+        post_df["p_username"] = [post_username]
+        post_df["p_like_count"] = [post_like_count]
         post_df["p_media_type"] = [post_media_type]
-        post_df["p_created_at"] = [post_created_at]
+        post_df["p_timestamp"] = [post_timestamp]
+        # post_df["p_permalink"] = [post_permalink]
+
             
     except KeyError: # empty post_df
             pass
@@ -219,11 +222,11 @@ def posts_from_master(userlist, period):
 
     since_ts, until_ts = period
 
-    filtered_df = master_df.loc[master_df["p_author"].isin(userlist)]
+    filtered_df = master_df.loc[master_df["p_username"].isin(userlist)]
     filtered_df = filtered_df[filtered_df["p_date"].between(
         since_ts, until_ts)]
 
-    filtered_df = filtered_df.drop(columns=["p_id", "p_date"])
+    filtered_df = filtered_df.drop(columns=["p_shortcode", "p_date"])
 
     posts = list(filtered_df.to_records(index=False))
 
