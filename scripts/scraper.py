@@ -125,7 +125,7 @@ def scrape_post(driver, comments=True, replies=True):
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
-    post_shortcode = post_username = post_like_count = post_media_type = post_views_count = post_location = post_timestamp = None
+    post_shortcode = post_username = post_like_count = post_media_type = post_views_count = post_location = post_location = post_timestamp = None
 
     post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
@@ -167,13 +167,21 @@ def scrape_post(driver, comments=True, replies=True):
             pass
     
     try:
+        post_location_id = m[1]
+    except NoSuchElementException:
+
+    try:
         # post_df["p_caption"] = [post_caption]
-        post_df["p_shortcode"] = [post_shortcode]
-        post_df["p_username"] = [post_username]
+        # post_df["p_ig_id"] = [post_ig_id]
         post_df["p_like_count"] = [post_like_count]
         post_df["p_media_type"] = [post_media_type]
-        post_df["p_timestamp"] = [post_timestamp]
         # post_df["p_permalink"] = [post_permalink]
+        post_df["p_shortcode"] = [post_shortcode]
+        post_df["p_timestamp"] = [post_timestamp]
+        post_df["p_username"] = [post_username]
+        post_df["p_views_count"] = [post_views_count]
+        post_df["p_location"] = [post_location]
+        post_df["p_location_id"] = [post_location_id]
 
             
     except KeyError: # empty post_df
