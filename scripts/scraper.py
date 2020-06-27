@@ -114,14 +114,14 @@ def scrape_post(driver, comments=True, replies=True):
 
         comment_df = pd.DataFrame({
             "c_id": [comment_id],
-            "c_reply_id": [comment_parent_id],
+            "c_parent_id": [comment_parent_id],
             "c_username": [comment_username],
             "c_text": [comment_text],
             "c_like_count": [comment_like_count],
             "c_timestamp": [comment_timestamp],
         })
 
-        comment_df = comment_df.astype({"c_id": object,"c_reply_id": object,})
+        comment_df = comment_df.astype({"c_id": object,"c_parent_id": object,})
 
         return comment_df
 
