@@ -164,11 +164,11 @@ def scrape_post(driver, comments=True, replies=True):
             if m: post_views_count = int(m[0])
             else: post_views_count = 0
 
-            # click out of the views pop-up to prevent ElementClickInterceptedException
-            driver.find_element_by_css_selector(".QhbhU").click()
-
             post_like_count = driver.find_element_by_css_selector(".vJRqr span").text
             post_like_count = int(post_like_count.replace(",", ""))            
+
+            # click out of the views pop-up to prevent ElementClickInterceptedException
+            driver.find_element_by_css_selector(".QhbhU").click()
         except NoSuchElementException:
             pass
     
