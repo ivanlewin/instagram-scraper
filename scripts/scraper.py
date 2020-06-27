@@ -104,29 +104,28 @@ def scrape_post(driver, comments=True, replies=True):
 
             likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
-            if m:
-                comment_like_count = int(m[0])
-            else:
-                comment_like_count = 0
+            if m: comment_like_count = int(m[0])
+            else: comment_like_count = 0
 
         except NoSuchElementException:
             pass
 
         comment_df = pd.DataFrame({
-            "c_id": [comment_id],
-            "c_parent_id": [comment_parent_id],
             "c_username": [comment_username],
+            "c_timestamp": [comment_timestamp],
             "c_text": [comment_text],
             "c_like_count": [comment_like_count],
-            "c_timestamp": [comment_timestamp],
+            "c_id": [comment_id],
+            "c_parent_id": [comment_parent_id],
         })
 
         comment_df = comment_df.astype({"c_id": object,"c_parent_id": object,})
 
         return comment_df
 
+    # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
-    post_shortcode = post_username = post_like_count = post_media_type = post_timestamp = None
+    post_shortcode = post_username = post_like_count = post_media_type = post_views_count = post_location = post_timestamp = None
 
     post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
@@ -139,13 +138,10 @@ def scrape_post(driver, comments=True, replies=True):
             post_media_type = "CAROUSEL_ALBUM"
     except NoSuchElementException:
         pass
-        
 
     try:
         post_timestamp = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute("datetime")
         post_timestamp = datetime.strptime(post_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
-        # post_timestamp = datetime.timestamp(post_timestamp)
-
         post_username = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
     except NoSuchElementException:
         pass
@@ -156,11 +152,17 @@ def scrape_post(driver, comments=True, replies=True):
     except NoSuchElementException:
         # On video posts, you have to click the "views count" span for the likes count to appear
         try:
-            driver.find_element_by_css_selector(".vcOH2").click()
+            views = driver.find_element_by_css_selector(".vcOH2")
+            views.click()
+            m = match(r"(\d+)", views.text.replace(",", ""))
+            if m: post_views_count = int(m[0])
+            else: post_views_count = 0
+
+            # click out of the views pop-up to prevent ElementClickInterceptedException
+            driver.find_element_by_css_selector(".QhbhU").click()
+
             post_like_count = driver.find_element_by_css_selector(".vJRqr span").text
-            post_like_count = int(post_like_count.replace(",", ""))
-            
-            driver.find_element_by_css_selector(".QhbhU").click() # click out of the views_count pop-up
+            post_like_count = int(post_like_count.replace(",", ""))            
         except NoSuchElementException:
             pass
     
