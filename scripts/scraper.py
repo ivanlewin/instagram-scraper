@@ -93,12 +93,14 @@ def scrape_post(driver, comments=True, replies=True):
             
             permalink = info.find_element_by_css_selector("a")
             m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute("href"))
-            comment_id = m[1]
-            comment_reply_id = m[2]
+            if m[2]:
+                comment_id = m[2]
+                comment_parent_id = m[1]
+            else: comment_id = m[1]
 
-            comment_created_at = info.find_element_by_tag_name("time").get_attribute("datetime")
-            comment_created_at = datetime.strptime(comment_created_at, r"%Y-%m-%dT%H:%M:%S.%fZ")
-            # comment_created_at = datetime.timestamp(comment_created_at)
+            comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
+            comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
+            # comment_timestamp = datetime.timestamp(comment_timestamp)
 
             likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
