@@ -175,21 +175,25 @@ def scrape_post(driver, comments=True, replies=True):
         pass
 
     try:
-        # post_df["p_caption"] = [post_caption]
-        # post_df["p_ig_id"] = [post_ig_id]
-        post_df["p_like_count"] = [post_like_count]
-        post_df["p_media_type"] = [post_media_type]
-        # post_df["p_permalink"] = [post_permalink]
-        post_df["p_shortcode"] = [post_shortcode]
-        post_df["p_timestamp"] = [post_timestamp]
-        post_df["p_username"] = [post_username]
-        post_df["p_views_count"] = [post_views_count]
-        post_df["p_location"] = [post_location]
-        post_df["p_location_id"] = [post_location_id]
+        ig_id = driver.find_element_by_css_selector("meta[property='al:ios:url']")
+        m = match(r"instagram:\/\/media\?id=(\d+)", ig_id.get_attribute("content"))
+        post_ig_id = m[1]
+    except NoSuchElementException:
+        pass
 
-            
-    except KeyError: # empty post_df
-            pass
+    # Fill dataframe with values, which will be None if not found
+
+    # post_df["p_caption"] = [post_caption]
+    post_df["p_ig_id"] = [post_ig_id]
+    post_df["p_like_count"] = [post_like_count]
+    post_df["p_media_type"] = [post_media_type]
+    # post_df["p_permalink"] = [post_permalink]
+    post_df["p_shortcode"] = [post_shortcode]
+    post_df["p_timestamp"] = [post_timestamp]
+    post_df["p_username"] = [post_username]
+    post_df["p_views_count"] = [post_views_count]
+    post_df["p_location"] = [post_location]
+    post_df["p_location_id"] = [post_location_id]
 
     try:
         if comments:
