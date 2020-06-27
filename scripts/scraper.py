@@ -167,8 +167,12 @@ def scrape_post(driver, comments=True, replies=True):
             pass
     
     try:
+        location = driver.find_element_by_css_selector(".O4GlU")
+        post_location = location.text
+        m = match(r"https:\/\/www\.instagram\.com\/explore\/locations\/(\d+)\/.*", location.get_attribute("href"))
         post_location_id = m[1]
     except NoSuchElementException:
+        pass
 
     try:
         # post_df["p_caption"] = [post_caption]
