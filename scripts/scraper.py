@@ -125,7 +125,7 @@ def scrape_post(driver, comments=True, replies=True):
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
-    post_shortcode = post_username = post_like_count = post_media_type = post_views_count = post_location = post_location = post_timestamp = None
+    post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
 
     post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
@@ -195,24 +195,23 @@ def scrape_post(driver, comments=True, replies=True):
     post_df["p_location"] = [post_location]
     post_df["p_location_id"] = [post_location_id]
 
-    try:
-        if comments:
+    if comments:
+        try:
             load_comments()
             if replies:
                 load_replies()
 
             comments_df = pd.DataFrame()
 
-            for comment in driver.find_elements_by_css_selector("ul.Mr508 div.ZyFrc div.C4VMK"):
+            for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 > div.ZyFrc div.C4VMK"):
                 driver.execute_script("arguments[0].scrollIntoView();", comment)
                 comment_df = get_comment_info(comment)
                 comments_df = pd.concat([comments_df, comment_df])
 
             post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
             post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
-    
-    except ValueError: # empty df
-        pass
+        except ValueError: # empty df
+            pass
 
     return post_df
 
