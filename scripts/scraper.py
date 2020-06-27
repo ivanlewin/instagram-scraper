@@ -130,6 +130,12 @@ def scrape_post(driver, comments=True, replies=True):
     post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
     try:
+        caption = driver.find_element_by_css_selector("ul.XQXOT > div.ZyFrc div.C4VMK")
+        post_caption = caption.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text        
+    except NoSuchElementException:
+        pass
+
+    try:
         if driver.find_elements_by_css_selector("._97aPb > .ZyFrc"):
             post_media_type = "IMAGE"
         elif driver.find_elements_by_css_selector("._97aPb > div > .kPFhm"):
@@ -182,8 +188,7 @@ def scrape_post(driver, comments=True, replies=True):
         pass
 
     # Fill dataframe with values, which will be None if not found
-
-    # post_df["p_caption"] = [post_caption]
+    post_df["p_caption"] = [post_caption]
     post_df["p_ig_id"] = [post_ig_id]
     post_df["p_like_count"] = [post_like_count]
     post_df["p_media_type"] = [post_media_type]
