@@ -80,7 +80,12 @@ def bs4_parse(post_html):
         post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S")
     except IndexError:
         try:
-            date = post_json["accessibility_caption"]
+            if post_media_type == "IMAGE":
+                date = post_json["accessibility_caption"]
+            elif post_media_type == "CAROUSEL_ALBUM":
+                date = post_json["edge_sidecar_to_children"]["edges"][0]["node"]["accessibility_caption"] 
+            else:
+                date = post_json["accessibility_caption"]
             m = match(r"^.*shared by .* on (.*, \d{4})", date)
             post_timestamp = datetime.strptime(m[1], "%B %d, %Y")
         except:
