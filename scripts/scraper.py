@@ -29,7 +29,7 @@ def bs4_parse(post_html):
     post_df = pd.DataFrame()
     post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
     
-    soup = BeautifulSoup(post_response.text, "html.parser")
+    soup = BeautifulSoup(post_html, "html.parser")
 
     # Search for a script that contains the post metadata
     for script in soup.select("script[type='text/javascript']"):
@@ -40,7 +40,12 @@ def bs4_parse(post_html):
             post_json = json_object["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
 
     post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
-    post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
+    
+    try:
+        post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
+    except IndexError: # No caption
+        pass
+
     post_ig_id = post_json["id"]
     post_like_count = int(post_json["edge_media_preview_like"]["count"])
     post_shortcode = post_json["shortcode"]
@@ -65,12 +70,20 @@ def bs4_parse(post_html):
     except KeyError: # Catch KeyError for non-video posts
         pass
 
-    # The timestamp info is not on the script that contains the majority of the metadata
-    timestamp_string = soup.select("script[type='application/ld+json']")[0].string
-    timestamp_json = json.loads(timestamp_string)
-    timestamp = timestamp_json["uploadDate"]
-    post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S")
-
+    # On some posts there is a script that contains the full timestamp info, ISO8601 formatted
+    try:
+        timestamp_string = soup.select("script[type='application/ld+json']")[0].string
+        timestamp_json = json.loads(timestamp_string)
+        timestamp = timestamp_json["uploadDate"]
+        post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S")
+    except IndexError:
+        try:
+            date = post_json["accessibility_caption"]
+            m = match(r"^.*shared by .* on (.*, \d{4})", date)
+            post_timestamp = datetime.strptime(m[1], "%B %d, %Y")
+        except:
+            pass
+        
     # Fill dataframe with values, which will be None if not found
     post_df["p_comments_count"] = [post_comments_count]
     post_df["p_caption"] = [post_caption]
