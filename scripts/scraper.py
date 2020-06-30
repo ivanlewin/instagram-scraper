@@ -180,10 +180,10 @@ def scrape_comments(driver, replies=False):
                         sleep(0.5)
                         text = button.text
                             
-                except StaleElementReferenceException:
+                except (StaleElementReferenceException, ElementClickInterceptedException):
                     pass
 
-        except (NoSuchElementException, ElementClickInterceptedException):
+        except (NoSuchElementException):
             pass
 
     def get_comment_info(comment):
