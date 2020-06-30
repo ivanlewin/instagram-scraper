@@ -3,18 +3,36 @@ import os
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from pandas.errors import EmptyDataError
+from configparser import ConfigParser
 from datetime import datetime
+from pandas.errors import EmptyDataError
 from re import match, search
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 from time import sleep
 
 
+def read_config():
+
+    config = ConfigParser()
+
+    config.read('./scripts/config.txt')
+
+    comments = config.getboolean("comments", "comments")
+    replies = config.getboolean("comments", "replies")
+
+    settings = {
+        "comments": comments,
+        "replies": replies,
+    }
+
+    return settings
+
+
 def read_posts():
     posts = {}
     folder = "./posts"
-    for file in os.listdir(folder)[1:]: # Ignore the .gitkeep file
+    for file in os.listdir(folder)[1:]:  # Ignore the .gitkeep file
         user, _ = os.path.splitext(file)
         if user:
             with open(os.path.join(folder, file), "r") as f:
@@ -22,13 +40,13 @@ def read_posts():
 
     return posts
 
-    
+
 def bs4_parse(post_html):
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
     post_comments_count = post_caption = post_ig_id = post_is_comment_enabled = post_like_count = post_media_type = post_owner = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
-    
+
     soup = BeautifulSoup(post_html, "html.parser")
 
     # Search for a script that contains the post metadata
@@ -40,10 +58,10 @@ def bs4_parse(post_html):
             post_json = json_object["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
 
     post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
-    
+
     try:
         post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
-    except IndexError: # No caption
+    except IndexError:  # No caption
         pass
 
     post_ig_id = post_json["id"]
@@ -56,9 +74,9 @@ def bs4_parse(post_html):
     try:
         post_location = post_json["location"]["name"]
         post_location_id = post_json["location"]["id"]
-    except TypeError: # Catch TypeError when post_json["location"] is None
+    except TypeError:  # Catch TypeError when post_json["location"] is None
         pass
-    
+
     media_type = post_json["__typename"]
     if media_type == "GraphImage":
         post_media_type = "IMAGE"
@@ -66,10 +84,10 @@ def bs4_parse(post_html):
         post_media_type = "CAROUSEL_ALBUM"
     else:
         post_media_type = "VIDEO"
-    
+
     try:
         post_views_count = post_json["video_view_count"]
-    except KeyError: # Catch KeyError for non-video posts
+    except KeyError:  # Catch KeyError for non-video posts
         pass
 
     # On some posts there is a script that contains the full timestamp info, ISO8601 formatted
@@ -83,14 +101,14 @@ def bs4_parse(post_html):
             if post_media_type == "IMAGE":
                 date = post_json["accessibility_caption"]
             elif post_media_type == "CAROUSEL_ALBUM":
-                date = post_json["edge_sidecar_to_children"]["edges"][0]["node"]["accessibility_caption"] 
+                date = post_json["edge_sidecar_to_children"]["edges"][0]["node"]["accessibility_caption"]
             else:
                 date = post_json["accessibility_caption"]
             m = match(r"^.* on (.*, \d{4})", date)
             post_timestamp = datetime.strptime(m[1], "%B %d, %Y")
         except:
             pass
-        
+
     # Fill dataframe with values, which will be None if not found
     post_df["p_comments_count"] = [post_comments_count]
     post_df["p_caption"] = [post_caption]
@@ -130,35 +148,37 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
 
             if not profile:
                 profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
-                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0]) # Selecting first profile in the folder
+                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0])  # Selecting first profile in the folder
 
             firefox_profile = webdriver.FirefoxProfile(profile_directory=profile)
             driver = webdriver.Firefox(firefox_profile)
-        
-        else: driver = webdriver.Firefox()
+
+        else:
+            driver = webdriver.Firefox()
 
     if driver == "Chrome":
 
         if existing_profile:
 
             if not profile:
-                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data") # Selects Default profile
+                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data")  # Selects Default profile
 
             options = webdriver.ChromeOptions()
             options.add_argument("user-data-dir=" + profile)
-            driver = webdriver.Chrome(chrome_options=options)            
+            driver = webdriver.Chrome(chrome_options=options)
 
-        else: driver = webdriver.Chrome()
-    
+        else:
+            driver = webdriver.Chrome()
+
     return driver
 
 
 def scrape_comments(driver, replies=False):
-    
+
     def load_comments():
         """Clicks the "Load more comments" button until there are no more comments."""
         while True:
-            try:            
+            try:
                 load_more_comments = driver.find_element_by_css_selector("button.dCJp8")
                 load_more_comments.click()
                 sleep(2)
@@ -179,7 +199,7 @@ def scrape_comments(driver, replies=False):
                         button.click()
                         sleep(0.5)
                         text = button.text
-                            
+
                 except (StaleElementReferenceException, ElementClickInterceptedException):
                     pass
 
@@ -195,13 +215,14 @@ def scrape_comments(driver, replies=False):
             comment_text = comment.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text
 
             info = comment.find_element_by_css_selector(".aGBdT > div")
-            
+
             permalink = info.find_element_by_css_selector("a")
             m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute("href"))
             if m[2]:
                 comment_id = m[2]
                 comment_parent_id = m[1]
-            else: comment_id = m[1]
+            else:
+                comment_id = m[1]
 
             comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
             comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
@@ -209,8 +230,10 @@ def scrape_comments(driver, replies=False):
 
             likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
-            if m: comment_like_count = int(m[0])
-            else: comment_like_count = 0
+            if m:
+                comment_like_count = int(m[0])
+            else:
+                comment_like_count = 0
 
         except NoSuchElementException:
             pass
@@ -224,26 +247,24 @@ def scrape_comments(driver, replies=False):
             "c_parent_id": [comment_parent_id],
         })
 
-        comment_df = comment_df.astype({"c_id": object,"c_parent_id": object,})
+        comment_df = comment_df.astype({"c_id": object, "c_parent_id": object, })
 
         return comment_df
 
     comments_df = pd.DataFrame()
-    
+
     load_comments()
     if replies:
         load_replies()
-    
+
     try:
         for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 div.ZyFrc div.C4VMK"):
             driver.execute_script("arguments[0].scrollIntoView();", comment)
             comment_df = get_comment_info(comment)
             comments_df = pd.concat([comments_df, comment_df])
 
-    except ValueError: # empty df
+    except ValueError:  # empty df
         pass
-        # post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
-        # post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
 
     return comments_df
 
@@ -286,69 +307,16 @@ def posts_from_master(userlist, period):
 
     return posts
 
+def main(**kwargs):
 
-def main(timestamp=datetime.now().strftime(r"%Y%m%d-%H%M%S"), **kwargs):
-
-    driver = load_driver()
-
-    if kwargs["scraping_mode"] == "post_list":
-
-        print("Retrieveing post list")
-
-        with open("posts.txt", "r") as f:
-            post_list = f.read().splitlines()
-
-        file_path = get_file_path(timestamp, prefix="posts")
-
-        for post in post_list:
-
-            driver.get(post)
-            sleep(2)
-            df = scrape_post(driver)
-
-            save_dataframe(df, file_path)
-
-        print(f"Comments exported: {file_path}")
-
-    if kwargs["scraping_mode"] == "master_file":
-
-        print("Getting user list")
-        with open("users.txt", "r") as file:
-            userlist = file.read().splitlines()
-
-        print("Reading master file")
-        posts = posts_from_master(userlist, kwargs["period"])
-
-        print("Scraping posts")
-
-        for post in posts:
-
-            user, link = post
-
-            file_path = get_file_path(timestamp, prefix=user)
-            df = scrape_post(driver, link)
-            save_dataframe(df, file_path)
-
-        print(f"Comments exported")
-
-    driver.quit()
-
-
-if __name__ == "__main__":
-
-    # default_config = {"scraping_mode": "master_file",
-    # "period": (0, datetime.timestamp(datetime.now()))}
-
-    # main(**default_config)
-
-    timestamp=datetime.now().strftime(r"%Y%m%d")
+    timestamp = datetime.now().strftime(r"%Y%m%d")
     post_dict = read_posts()
-    comments = False
-    replies = False
+    comments = kwargs["comments"]
+    replies = kwargs["replies"]
     driver = None
 
     for user in post_dict:
-        
+
         dest_path = get_file_path(timestamp, user)
 
         for post in post_dict[user]:
@@ -358,20 +326,26 @@ if __name__ == "__main__":
             post_df = bs4_parse(r.text)
 
             if comments:
-                
+                print("Scraping comments")
+
                 if not driver:
                     driver = load_driver()
 
                 driver.get(post)
                 sleep(2)
-                comments_df = scrape_comments(driver, replies=True)
+                comments_df = scrape_comments(driver, replies=replies)
 
                 try:
-                    post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
-                    post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
+                    post_df = pd.concat([post_df] * len(comments_df.index))  # Repeat the post_df rows to match the comments count
+                    post_df = pd.concat([post_df, comments_df], axis=1)  # Join the two dataframes together, side to side horizontally
 
-                except ValueError: # Empty df
+                except ValueError:  # Empty df
                     pass
-            
+
             save_dataframe(post_df, dest_path)
             print(f"Database saved: {dest_path}\n")
+
+
+if __name__ == "__main__":
+    config = read_config()
+    main(config)
