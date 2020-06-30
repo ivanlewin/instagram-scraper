@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from pandas.errors import EmptyDataError
 from datetime import datetime
-from re import match
+from re import match, search
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 from time import sleep
@@ -125,7 +125,7 @@ def scrape_post(driver, comments=True, replies=True):
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
-    post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
+    post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
 
     post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
 
@@ -187,11 +187,23 @@ def scrape_post(driver, comments=True, replies=True):
     except NoSuchElementException:
         pass
 
+    try:
+        comments_count = driver.find_element_by_css_selector("meta[content][name='description']")
+        m = search(r"(\d+) Comments", comments_count.get_attribute("content"))
+        post_comments_count = m[1]
+    except NoSuchElementException:
+        pass
+
     # Fill dataframe with values, which will be None if not found
+    post_df["p_comments_count"] = [post_comments_count]
     post_df["p_caption"] = [post_caption]
+    # post_df["p_id"] = [post_id]
     post_df["p_ig_id"] = [post_ig_id]
+    # post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
     post_df["p_like_count"] = [post_like_count]
     post_df["p_media_type"] = [post_media_type]
+    # post_df["p_media_url"] = [post_media_url]
+    # post_df["p_owner"] = [post_owner]
     # post_df["p_permalink"] = [post_permalink]
     post_df["p_shortcode"] = [post_shortcode]
     post_df["p_timestamp"] = [post_timestamp]
@@ -251,8 +263,7 @@ def posts_from_master(userlist, period):
     since_ts, until_ts = period
 
     filtered_df = master_df.loc[master_df["p_username"].isin(userlist)]
-    filtered_df = filtered_df[filtered_df["p_date"].between(
-        since_ts, until_ts)]
+    filtered_df = filtered_df[filtered_df["p_date"].between(since_ts, until_ts)]
 
     filtered_df = filtered_df.drop(columns=["p_shortcode", "p_date"])
 
