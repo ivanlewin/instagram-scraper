@@ -1,3 +1,4 @@
+import json
 import os
 import pandas as pd
 import requests
@@ -8,20 +9,27 @@ from re import match
 from time import sleep
 
 
-def request_post(text):
+def request_post(response):
 
-    soup = BeautifulSoup(text, "html.parser")
+    soup = BeautifulSoup(response, "html.parser")
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
     post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
 
-    post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
+    # Search for a script that contains the post metadata
+    json_info = json.loads(soup.select("script[type='application/ld+json']")[0].string)
 
     try:
-        caption = soup.select("ul.XQXOT > div.ZyFrc div.C4VMK")
-        post_caption = caption.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text        
-    except NoSuchElementException:
+        shortcode = json_info["mainEntityofPage"]["@id"]
+        post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", shortcode)[1]
+    except IndexError:
+        pass
+
+    try:
+        caption = soup.select("script[type='application/ld+json']")[0]
+        p_caption = json.loads(caption.string)["caption"]
+    except IndexError:
         pass
 
     try:
@@ -151,8 +159,6 @@ def posts_from_master(userlist, period):
 
 def main(timestamp=datetime.now().strftime(r"%Y%m%d-%H%M%S"), **kwargs):
 
-    driver = load_driver()
-
     if kwargs["scraping_mode"] == "post_list":
 
         print("Retrieveing post list")
@@ -202,3 +208,8 @@ if __name__ == "__main__":
     "period": (0, datetime.timestamp(datetime.now()))}
 
     # main(**default_config)
+
+
+r = requests.get(post).text
+with open("requests.html", "w+", encoding="utf-8") as f:
+    f.write(r)
