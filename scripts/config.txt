@@ -1,22 +1,3 @@
-[create_dictionaries]
-# Uses Instagram API
-
-accounts = False
-# get a json with the account info of the users
-
-posts = False
-# get a json with the info of the last posts of the account
-
-number_of_posts = 1
-# how many posts back to get (if create_posts_dict = True)
-
-
-[scraping]
-# post_list / master_file
-scraping_mode = master_file
-
-
-[period]
-# Format YYYY-MM-DD (both optional)
-since = 
-until = 
+[comments]
+comments = True
+replies = True

@@ -3,3 +3,4 @@ comments/**/*.csv
 comments/**/*.xlsx
 dictionaries/**/*.csv
 dictionaries/**/*.json
+posts/**/*.txt
