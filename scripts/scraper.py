@@ -86,7 +86,7 @@ def bs4_parse(post_html):
                 date = post_json["edge_sidecar_to_children"]["edges"][0]["node"]["accessibility_caption"] 
             else:
                 date = post_json["accessibility_caption"]
-            m = match(r"^.*shared by .* on (.*, \d{4})", date)
+            m = match(r"^.* on (.*, \d{4})", date)
             post_timestamp = datetime.strptime(m[1], "%B %d, %Y")
         except:
             pass
