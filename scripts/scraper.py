@@ -228,7 +228,7 @@ def scrape_comments(driver, replies=False):
         load_replies()
     
     try:
-        for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 > div.ZyFrc div.C4VMK"):
+        for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 div.ZyFrc div.C4VMK"):
             driver.execute_script("arguments[0].scrollIntoView();", comment)
             comment_df = get_comment_info(comment)
             comments_df = pd.concat([comments_df, comment_df])
