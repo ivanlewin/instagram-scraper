@@ -1,11 +1,83 @@
+import json
 import os
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
 from pandas.errors import EmptyDataError
 from datetime import datetime
 from re import match, search
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 from time import sleep
+
+
+def bs4_parse(post_response):
+
+    # Initialize dataframe instance, and set post metadata to None
+    post_df = pd.DataFrame()
+    post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
+    
+    soup = BeautifulSoup(post_response.text, "html.parser")
+
+    # Search for a script that contains the post metadata
+    for script in soup.select("script[type='text/javascript']"):
+        if (script.string and script.string.startswith("window._sharedData")):
+            json_string = script.string.replace("window._sharedData = ", "")
+            json_string = json_string[:-1]
+            json_object = json.loads(json_string)
+            post_json = json_object["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
+
+    post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
+    post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
+    post_ig_id = post_json["id"]
+    post_like_count = int(post_json["edge_media_preview_like"]["count"])
+    post_shortcode = post_json["shortcode"]
+    post_username = post_json["owner"]["username"]
+
+    try:
+        post_location = post_json["location"]["name"]
+        post_location_id = post_json["location"]["id"]
+    except TypeError: # Catch TypeError when post_json["location"] is None
+        pass
+    
+    media_type = post_json["__typename"]
+    if media_type == "GraphImage":
+        post_media_type = "IMAGE"
+    elif media_type == "GraphSidecar":
+        post_media_type = "CAROUSEL_ALBUM"
+    else:
+        post_media_type = "VIDEO"
+    
+    try:
+        post_views_count = post_json["video_view_count"]
+    except KeyError: # Catch KeyError for non-video posts
+        pass
+
+    # The timestamp info is not on the script that contains the majority of the metadata
+    timestamp_string = soup.select("script[type='application/ld+json']")[0].string
+    timestamp_json = json.loads(timestamp_string)
+    timestamp = timestamp_json["uploadDate"]
+    post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S")
+
+    # Fill dataframe with values, which will be None if not found
+    post_df["p_comments_count"] = [post_comments_count]
+    post_df["p_caption"] = [post_caption]
+    # post_df["p_id"] = [post_id]
+    post_df["p_ig_id"] = [post_ig_id]
+    # post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
+    post_df["p_like_count"] = [post_like_count]
+    post_df["p_media_type"] = [post_media_type]
+    # post_df["p_media_url"] = [post_media_url]
+    # post_df["p_owner"] = [post_owner]
+    # post_df["p_permalink"] = [post_permalink]
+    post_df["p_shortcode"] = [post_shortcode]
+    post_df["p_timestamp"] = [post_timestamp]
+    post_df["p_username"] = [post_username]
+    post_df["p_views_count"] = [post_views_count]
+    post_df["p_location"] = [post_location]
+    post_df["p_location_id"] = [post_location_id]
+
+    return post_df
 
 
 def load_driver(driver="Firefox", existing_profile=False, profile=None):
@@ -48,7 +120,8 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
     
     return driver
 
-def scrape_post(driver, comments=True, replies=True):
+
+def scrape_comments(driver, replies=False):
     
     def load_comments():
         """Clicks the "Load more comments" button until there are no more comments."""
@@ -123,114 +196,24 @@ def scrape_post(driver, comments=True, replies=True):
 
         return comment_df
 
-    # Initialize dataframe instance, and set post metadata to None
-    post_df = pd.DataFrame()
-    post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
-
-    post_shortcode = match(r"https:\/\/www\.instagram\.com\/p\/(.+)\/", driver.current_url)[1]
-
-    try:
-        caption = driver.find_element_by_css_selector("ul.XQXOT > div.ZyFrc div.C4VMK")
-        post_caption = caption.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text        
-    except NoSuchElementException:
-        pass
-
-    try:
-        if driver.find_elements_by_css_selector("._97aPb > .ZyFrc"):
-            post_media_type = "IMAGE"
-        elif driver.find_elements_by_css_selector("._97aPb > div > .kPFhm"):
-            post_media_type = "VIDEO"
-        elif driver.find_elements_by_css_selector("._97aPb > .rQDP3"):
-            post_media_type = "CAROUSEL_ALBUM"
-    except NoSuchElementException:
-        pass
-
-    try:
-        post_timestamp = driver.find_element_by_css_selector(".c-Yi7 > time").get_attribute("datetime")
-        post_timestamp = datetime.strptime(post_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
-        post_username = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
-    except NoSuchElementException:
-        pass
-
-    try:
-        post_like_count = driver.find_element_by_css_selector(".Nm9Fw span").text
-        post_like_count = int(post_like_count.replace(",", ""))
-    except NoSuchElementException:
-        # On video posts, you have to click the "views count" span for the likes count to appear
-        try:
-            views = driver.find_element_by_css_selector(".vcOH2")
-            views.click()
-            m = match(r"(\d+)", views.text.replace(",", ""))
-            if m: post_views_count = int(m[0])
-            else: post_views_count = 0
-
-            post_like_count = driver.find_element_by_css_selector(".vJRqr span").text
-            post_like_count = int(post_like_count.replace(",", ""))            
-
-            # click out of the views pop-up to prevent ElementClickInterceptedException
-            driver.find_element_by_css_selector(".QhbhU").click()
-        except NoSuchElementException:
-            pass
+    comments_df = pd.DataFrame()
+    
+    load_comments()
+    if replies:
+        load_replies()
     
     try:
-        location = driver.find_element_by_css_selector(".O4GlU")
-        post_location = location.text
-        m = match(r"https:\/\/www\.instagram\.com\/explore\/locations\/(\d+)\/.*", location.get_attribute("href"))
-        post_location_id = m[1]
-    except NoSuchElementException:
+        for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 > div.ZyFrc div.C4VMK"):
+            driver.execute_script("arguments[0].scrollIntoView();", comment)
+            comment_df = get_comment_info(comment)
+            comments_df = pd.concat([comments_df, comment_df])
+
+    except ValueError: # empty df
         pass
+        # post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
+        # post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
 
-    try:
-        ig_id = driver.find_element_by_css_selector("meta[property='al:ios:url']")
-        m = match(r"instagram:\/\/media\?id=(\d+)", ig_id.get_attribute("content"))
-        post_ig_id = m[1]
-    except NoSuchElementException:
-        pass
-
-    try:
-        comments_count = driver.find_element_by_css_selector("meta[content][name='description']")
-        m = search(r"(\d+) Comments", comments_count.get_attribute("content"))
-        post_comments_count = m[1]
-    except NoSuchElementException:
-        pass
-
-    # Fill dataframe with values, which will be None if not found
-    post_df["p_comments_count"] = [post_comments_count]
-    post_df["p_caption"] = [post_caption]
-    # post_df["p_id"] = [post_id]
-    post_df["p_ig_id"] = [post_ig_id]
-    # post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
-    post_df["p_like_count"] = [post_like_count]
-    post_df["p_media_type"] = [post_media_type]
-    # post_df["p_media_url"] = [post_media_url]
-    # post_df["p_owner"] = [post_owner]
-    # post_df["p_permalink"] = [post_permalink]
-    post_df["p_shortcode"] = [post_shortcode]
-    post_df["p_timestamp"] = [post_timestamp]
-    post_df["p_username"] = [post_username]
-    post_df["p_views_count"] = [post_views_count]
-    post_df["p_location"] = [post_location]
-    post_df["p_location_id"] = [post_location_id]
-
-    if comments:
-        try:
-            load_comments()
-            if replies:
-                load_replies()
-
-            comments_df = pd.DataFrame()
-
-            for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 > div.ZyFrc div.C4VMK"):
-                driver.execute_script("arguments[0].scrollIntoView();", comment)
-                comment_df = get_comment_info(comment)
-                comments_df = pd.concat([comments_df, comment_df])
-
-            post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
-            post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
-        except ValueError: # empty df
-            pass
-
-    return post_df
+    return comments_df
 
 
 def save_dataframe(df, path):
