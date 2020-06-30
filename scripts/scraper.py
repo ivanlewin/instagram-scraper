@@ -11,7 +11,19 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 from time import sleep
 
 
-def bs4_parse(post_response):
+def read_posts():
+    posts = {}
+    folder = "./posts"
+    for file in os.listdir(folder)[1:]: # Ignore the .gitkeep file
+        user, _ = os.path.splitext(file)
+        if user:
+            with open(os.path.join(folder, file), "r") as f:
+                posts[user] = [p for p in f.read().splitlines()]
+
+    return posts
+
+    
+def bs4_parse(post_html):
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
