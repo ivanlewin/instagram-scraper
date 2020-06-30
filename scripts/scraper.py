@@ -348,4 +348,4 @@ def main(**kwargs):
 
 if __name__ == "__main__":
     config = read_config()
-    main(config)
+    main(**config)
