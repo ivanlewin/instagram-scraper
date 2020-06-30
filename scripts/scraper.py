@@ -27,7 +27,7 @@ def bs4_parse(post_html):
 
     # Initialize dataframe instance, and set post metadata to None
     post_df = pd.DataFrame()
-    post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
+    post_comments_count = post_caption = post_ig_id = post_is_comment_enabled = post_like_count = post_media_type = post_owner = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
     
     soup = BeautifulSoup(post_html, "html.parser")
 
@@ -47,9 +47,11 @@ def bs4_parse(post_html):
         pass
 
     post_ig_id = post_json["id"]
+    post_is_comment_enabled = not (post_json["comments_disabled"])
     post_like_count = int(post_json["edge_media_preview_like"]["count"])
     post_shortcode = post_json["shortcode"]
     post_username = post_json["owner"]["username"]
+    post_owner = post_json["owner"]["id"]
 
     try:
         post_location = post_json["location"]["name"]
@@ -89,11 +91,11 @@ def bs4_parse(post_html):
     post_df["p_caption"] = [post_caption]
     # post_df["p_id"] = [post_id]
     post_df["p_ig_id"] = [post_ig_id]
-    # post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
+    post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
     post_df["p_like_count"] = [post_like_count]
     post_df["p_media_type"] = [post_media_type]
     # post_df["p_media_url"] = [post_media_url]
-    # post_df["p_owner"] = [post_owner]
+    post_df["p_owner"] = [post_owner]
     # post_df["p_permalink"] = [post_permalink]
     post_df["p_shortcode"] = [post_shortcode]
     post_df["p_timestamp"] = [post_timestamp]
