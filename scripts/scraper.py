@@ -329,7 +329,42 @@ def main(timestamp=datetime.now().strftime(r"%Y%m%d-%H%M%S"), **kwargs):
 
 if __name__ == "__main__":
 
-    default_config = {"scraping_mode": "master_file",
-    "period": (0, datetime.timestamp(datetime.now()))}
+    # default_config = {"scraping_mode": "master_file",
+    # "period": (0, datetime.timestamp(datetime.now()))}
 
     # main(**default_config)
+
+    timestamp=datetime.now().strftime(r"%Y%m%d")
+    post_dict = read_posts()
+    comments = False
+    replies = False
+    driver = None
+
+    for user in post_dict:
+        
+        dest_path = get_file_path(timestamp, user)
+
+        for post in post_dict[user]:
+            print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
+
+            r = requests.get(post)
+            post_df = bs4_parse(r.text)
+
+            if comments:
+                
+                if not driver:
+                    driver = load_driver()
+
+                driver.get(post)
+                sleep(2)
+                comments_df = scrape_comments(driver, replies=True)
+
+                try:
+                    post_df = pd.concat([post_df] * len(comments_df.index)) # Repeat the post_df rows to match the comments count
+                    post_df = pd.concat([post_df, comments_df], axis=1) # Join the two dataframes together, side to side horizontally
+
+                except ValueError: # Empty df
+                    pass
+            
+            save_dataframe(post_df, dest_path)
+            print(f"Database saved: {dest_path}\n")
