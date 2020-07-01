@@ -1,13 +1,18 @@
 import pandas as pd
 import openpyxl
 
-# Archivo de fanpage con las publicaciones del mes
-archivo  = r"./excel/Junio 2020.xlsx"
+# Base de posteos
+archivo = ""
 
-# Hardcodear el valor del hipervínculo en la celda
+skip_row = 10
+
+# Columna de Links. ej: 'A' = 1, 'B' = 2...
+columna = 12
+
+# Escribir el valor del hipervínculo en la celda
 wb = openpyxl.load_workbook(archivo)
 ws = wb['Top 10 Posts']
-for row in ws.iter_rows(min_row=10, min_col=12, max_col=12):
+for row in ws.iter_rows(min_row=skip_row, min_col=columna, max_col=columna):
     for cell in row:
         try:
             cell.value = cell.hyperlink.target
