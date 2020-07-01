@@ -1,6 +1,3 @@
 geckodriver.log
-comments/**/*.csv
-comments/**/*.xlsx
-dictionaries/**/*.csv
-dictionaries/**/*.json
-posts/**/*.txt
+# csv/*.csv
+# posts/*.txt
