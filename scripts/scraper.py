@@ -1,186 +1,272 @@
+import json
 import os
 import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from configparser import ConfigParser
 from datetime import datetime
-from re import match
+from pandas.errors import EmptyDataError
+from re import match, search
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
 from time import sleep
 
 
-def load_driver():
+def read_config():
 
-    # Find Firefox Profile
-    profiles_folder = f"{os.environ['appdata']}\Mozilla\Firefox\Profiles"
-    for profile in os.listdir(profiles_folder):
-        if "default-release" in profile:
-            firefox_profile = webdriver.FirefoxProfile(
-                f"{profiles_folder}/{profile}")
+    config = ConfigParser()
+
+    config.read('./scripts/config.txt')
+
+    comments = config.getboolean("comments", "comments")
+    replies = config.getboolean("comments", "replies")
+
+    settings = {
+        "comments": comments,
+        "replies": replies,
+    }
+
+    return settings
+
+
+def read_posts():
+    posts = {}
+    folder = "./posts"
+    for file in os.listdir(folder)[1:]:  # Ignore the .gitkeep file
+        user, _ = os.path.splitext(file)
+        if user:
+            with open(os.path.join(folder, file), "r") as f:
+                posts[user] = [p for p in f.read().splitlines()]
+
+    return posts
+
+
+def bs4_parse(post_html):
+
+    # Initialize dataframe instance, and set post metadata to None
+    post_df = pd.DataFrame()
+    post_comments_count = post_caption = post_ig_id = post_is_comment_enabled = post_like_count = post_media_type = post_owner = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
+
+    soup = BeautifulSoup(post_html, "html.parser")
+
+    # Search for a script that contains the post metadata
+    for script in soup.select("script[type='text/javascript']"):
+        if (script.string and script.string.startswith("window._sharedData")):
+            json_string = script.string.replace("window._sharedData = ", "")
+            json_string = json_string[:-1]
+            json_object = json.loads(json_string)
+            post_json = json_object["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
+
+    post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
+
+    try:
+        post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
+    except IndexError:  # No caption
+        pass
+
+    post_ig_id = post_json["id"]
+    post_is_comment_enabled = not (post_json["comments_disabled"])
+    post_like_count = int(post_json["edge_media_preview_like"]["count"])
+    post_shortcode = post_json["shortcode"]
+    post_username = post_json["owner"]["username"]
+    post_owner = post_json["owner"]["id"]
+
+    try:
+        post_location = post_json["location"]["name"]
+        post_location_id = post_json["location"]["id"]
+    except TypeError:  # Catch TypeError when post_json["location"] is None
+        pass
+
+    media_type = post_json["__typename"]
+    if media_type == "GraphImage":
+        post_media_type = "IMAGE"
+    elif media_type == "GraphSidecar":
+        post_media_type = "CAROUSEL_ALBUM"
+    else:
+        post_media_type = "VIDEO"
+
+    try:
+        post_views_count = post_json["video_view_count"]
+    except KeyError:  # Catch KeyError for non-video posts
+        pass
+
+    # On some posts there is a script that contains the full timestamp info, ISO8601 formatted
+    try:
+        timestamp_string = soup.select("script[type='application/ld+json']")[0].string
+        timestamp_json = json.loads(timestamp_string)
+        timestamp = timestamp_json["uploadDate"]
+        post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S")
+    except IndexError:
+        try:
+            if post_media_type == "IMAGE":
+                date = post_json["accessibility_caption"]
+            elif post_media_type == "CAROUSEL_ALBUM":
+                date = post_json["edge_sidecar_to_children"]["edges"][0]["node"]["accessibility_caption"]
+            else:
+                date = post_json["accessibility_caption"]
+            m = match(r"^.* on (.*, \d{4})", date)
+            post_timestamp = datetime.strptime(m[1], "%B %d, %Y")
+        except:
+            pass
+
+    # Fill dataframe with values, which will be None if not found
+    post_df["p_comments_count"] = [post_comments_count]
+    post_df["p_caption"] = [post_caption]
+    # post_df["p_id"] = [post_id]
+    post_df["p_ig_id"] = [post_ig_id]
+    post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
+    post_df["p_like_count"] = [post_like_count]
+    post_df["p_media_type"] = [post_media_type]
+    # post_df["p_media_url"] = [post_media_url]
+    post_df["p_owner"] = [post_owner]
+    # post_df["p_permalink"] = [post_permalink]
+    post_df["p_shortcode"] = [post_shortcode]
+    post_df["p_timestamp"] = [post_timestamp]
+    post_df["p_username"] = [post_username]
+    post_df["p_views_count"] = [post_views_count]
+    post_df["p_location"] = [post_location]
+    post_df["p_location_id"] = [post_location_id]
+
+    return post_df
+
+
+def load_driver(driver="Firefox", existing_profile=False, profile=None):
+    """Loads and returns a webdriver instance.
+
+    Keyword arguments:
+    driver -- which driver you want to use
+        "Chrome" for chromedriver or "Firefox" for geckodriver.
+    existing_profile -- wether you want to use an existing browser profile,
+        which grants access to cookies and other session data.
+    profile -- the path to the profile you want to use.
+        By default it will look into the default profiles_folder for the selected browser
+        and choose the first one, but it may be the case that you want to use another one.
+    """
+    if driver == "Firefox":
+
+        if existing_profile:
+
+            if not profile:
+                profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
+                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0])  # Selecting first profile in the folder
+
+            firefox_profile = webdriver.FirefoxProfile(profile_directory=profile)
             driver = webdriver.Firefox(firefox_profile)
 
-    driver.get('https://www.instagram.com/p/B8o367kgObt/')
+        else:
+            driver = webdriver.Firefox()
 
-    # try:
-    #     close_button = driver.find_element_by_css_selector('.xqRnw')
-    #     close_button.click()
+    if driver == "Chrome":
 
-    # except NoSuchElementException:
-    #     pass
+        if existing_profile:
+
+            if not profile:
+                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data")  # Selects Default profile
+
+            options = webdriver.ChromeOptions()
+            options.add_argument("user-data-dir=" + profile)
+            driver = webdriver.Chrome(chrome_options=options)
+
+        else:
+            driver = webdriver.Chrome()
 
     return driver
 
 
-def scrape_post(driver, post):
-    
-    def load_comments():
+def scrape_comments(driver, replies=False):
 
-        # Load all comments
-        try:
-            while True:
-                load_more_comments = driver.find_element_by_css_selector(
-                    '.MGdpg > button')
+    def load_comments():
+        """Clicks the "Load more comments" button until there are no more comments."""
+        while True:
+            try:
+                load_more_comments = driver.find_element_by_css_selector("button.dCJp8")
                 load_more_comments.click()
                 sleep(2)
+            except NoSuchElementException:
+                break
 
-        except NoSuchElementException:
-            pass
-
-        # Load replies to comments
+    def load_replies():
         try:
-            view_replies_buttons = driver.find_elements_by_css_selector(
-                '.y3zKF')
+            view_replies_buttons = driver.find_elements_by_css_selector(".y3zKF")
 
             for button in view_replies_buttons:
 
-                driver.execute_script("arguments[0].scrollIntoView();", button)
-
                 try:
-                    text = driver.execute_script(
-                        "return arguments[0].textContent;", button)
+                    driver.execute_script("arguments[0].scrollIntoView();", button)
+
+                    text = button.text
                     while "Ver" in text or "View" in text:
                         button.click()
                         sleep(0.5)
-                        text = driver.execute_script(
-                            "return arguments[0].textContent;", button)
-                            
-                except StaleElementReferenceException:
+                        text = button.text
+
+                except (StaleElementReferenceException, ElementClickInterceptedException):
                     pass
 
-        except NoSuchElementException:
+        except (NoSuchElementException):
             pass
 
     def get_comment_info(comment):
 
-        driver.execute_script("arguments[0].scrollIntoView();", comment)
+        comment_id = comment_parent_id = comment_timestamp = comment_username = comment_text = comment_like_count = None
 
-        user = comment.find_element_by_css_selector('h3 a').text
+        try:
+            comment_username = comment.find_element_by_css_selector("h3 a").text
+            comment_text = comment.find_element_by_css_selector("span:not([class*='coreSpriteVerifiedBadgeSmall'])").text
 
-        content = comment.find_element_by_css_selector('.C4VMK span')
-        content = driver.execute_script(
-            "return arguments[0].textContent;", content)
+            info = comment.find_element_by_css_selector(".aGBdT > div")
 
-        info = comment.find_element_by_css_selector('.aGBdT')
+            permalink = info.find_element_by_css_selector("a")
+            m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute("href"))
+            if m[2]:
+                comment_id = m[2]
+                comment_parent_id = m[1]
+            else:
+                comment_id = m[1]
 
-        likes = info.find_element_by_css_selector(
-            'div > button:nth-of-type(1)')
-        m = match(r"(\d+)", likes.text)
-        if m:
-            like_count = m[0]
-        else:
-            like_count = 0
+            comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
+            comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
+            # comment_timestamp = datetime.timestamp(comment_timestamp)
 
-        comment_date = info.find_element_by_css_selector(
-            'time').get_attribute('datetime')
-        m = match(
-            r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", comment_date)
-        comment_date = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
-        comment_date = datetime.strptime(comment_date, "%Y-%m-%d-%H-%M-%S")
-        comment_date = datetime.timestamp(comment_date)
+            likes = info.find_element_by_css_selector("button.FH9sR").text
+            m = match(r"(\d+)", likes)
+            if m:
+                comment_like_count = int(m[0])
+            else:
+                comment_like_count = 0
 
-        permalink = info.find_element_by_css_selector(
-            '.gU-I7').get_attribute('href')
-        m = match(
-            r"https:\/\/www\.instagram\.com\/p\/(?:.+)\/c\/(?P<c>\d+)\/(r\/(?P<r>\d+)\/)?", permalink)
-
-        if m['r']:
-            comment_id = m['r']
-            reply_to = m['c']
-        else:
-            comment_id = m['c']
-            reply_to = None
+        except NoSuchElementException:
+            pass
 
         comment_df = pd.DataFrame({
+            "c_username": [comment_username],
+            "c_timestamp": [comment_timestamp],
+            "c_text": [comment_text],
+            "c_like_count": [comment_like_count],
             "c_id": [comment_id],
-            "c_reply_to": [reply_to],
-            "c_date": [comment_date],
-            "c_user": [user],
-            "c_content": [content],
-            "c_likes": [like_count],
-            "c_permalink": [permalink]
+            "c_parent_id": [comment_parent_id],
         })
+
+        comment_df = comment_df.astype({"c_id": object, "c_parent_id": object, })
 
         return comment_df
 
-    driver.get(post)
-    sleep(2)
+    comments_df = pd.DataFrame()
+
     load_comments()
-
-    post_author = driver.find_elements_by_css_selector("a.ZIAjV")[0].text
-
-    try:
-        post_likes = driver.find_element_by_css_selector(".Nm9Fw span").text
-    except NoSuchElementException:
-        driver.find_element_by_css_selector(".vcOH2").click()
-        post_likes = driver.find_element_by_css_selector(".vJRqr span").text
-
-    post_likes = post_likes.replace(",", "")
-
-    post_info = driver.find_element_by_css_selector(".c-Yi7")
-
-    post_id = post_info.get_attribute('href')
-    m = match(r"https:\/\/www\.instagram\.com\/p\/(?P<post_id>.+)\/", post_id)
-    post_id = m['post_id']
-
-    post_created_at = post_info.find_element_by_css_selector("._1o9PC").get_attribute('datetime')
-    m = match(r"(?P<year>\d+)-(?P<month>\d+)-(?P<day>\d+)T(?P<hour>\d+):(?P<minute>\d+):(?P<second>.\d+)(?:\.\d+Z)", post_created_at)
-    post_created_at = f"{m['year']}-{m['month']}-{m['day']}-{m['hour']}-{m['minute']}-{m['second']}"
-    post_created_at = datetime.strptime(post_created_at, "%Y-%m-%d-%H-%M-%S")
-    post_created_at = datetime.timestamp(post_created_at)
-
-    post_df = pd.DataFrame()
-
-    for comment in driver.find_elements_by_css_selector('ul.Mr508 div.ZyFrc'):
-
-        comment_df = get_comment_info(comment)
-        post_df = pd.concat([post_df, comment_df])
+    if replies:
+        load_replies()
 
     try:
-        
-        # Convert dtypes of columns
+        for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 div.ZyFrc div.C4VMK"):
+            driver.execute_script("arguments[0].scrollIntoView();", comment)
+            comment_df = get_comment_info(comment)
+            comments_df = pd.concat([comments_df, comment_df])
 
-            convert_dict = {
-                "p_likes": int,
-                "p_comments": int,
-                "c_id": object,
-                "c_reply_to": object,
-                "c_likes": int,
-            }
-
-            post_df = post_df.astype(convert_dict)
-
-            post_df["p_id"] = post_id
-            post_df["p_author"] = post_author
-            post_df["p_date"] = post_created_at
-            post_df["p_likes"] = post_likes
-            post_df["p_comments"] = len(post_df.index)
-
-            # Reorder columns with post info first
-            new_order = list(post_df.columns.values[7:]) + list(post_df.columns.values[:7])
-            post_df = post_df.reindex(columns=new_order)
-
-    except KeyError: # empty post_df
+    except ValueError:  # empty df
         pass
 
-    return post_df
+    return comments_df
 
 
 def save_dataframe(df, path):
@@ -190,15 +276,17 @@ def save_dataframe(df, path):
         new_df = pd.concat([base_df, df])
         new_df.to_csv(path, index=False)
 
-    except (FileNotFoundError):
+    except (FileNotFoundError, EmptyDataError):
         df.to_csv(path, index=False)
 
 
 def get_file_path(timestamp, prefix):
 
-    comments_folder = os.path.abspath("../comments")
+    folder = os.path.abspath("./csv")
+    if not os.path.exists(folder):
+        os.mkdir(folder)
     filename = f"{prefix}_{timestamp}.csv"
-    file_path = os.path.join(comments_folder, filename)
+    file_path = os.path.join(folder, filename)
 
     return file_path
 
@@ -210,65 +298,54 @@ def posts_from_master(userlist, period):
 
     since_ts, until_ts = period
 
-    filtered_df = master_df.loc[master_df['p_author'].isin(userlist)]
-    filtered_df = filtered_df[filtered_df['p_date'].between(
-        since_ts, until_ts)]
+    filtered_df = master_df.loc[master_df["p_username"].isin(userlist)]
+    filtered_df = filtered_df[filtered_df["p_date"].between(since_ts, until_ts)]
 
-    filtered_df = filtered_df.drop(columns=["p_id", "p_date"])
+    filtered_df = filtered_df.drop(columns=["p_shortcode", "p_date"])
 
     posts = list(filtered_df.to_records(index=False))
 
     return posts
 
+def main(**kwargs):
 
-def main(timestamp=datetime.now().strftime("%Y%m%d-%H%M%S"), **kwargs):
+    timestamp = datetime.now().strftime(r"%Y%m%d")
+    post_dict = read_posts()
+    comments = kwargs["comments"]
+    replies = kwargs["replies"]
+    driver = None
 
-    driver = load_driver()
+    for user in post_dict:
 
-    if kwargs['scraping_mode'] == "post_list":
+        dest_path = get_file_path(timestamp, user)
 
-        print("Retrieveing post list")
+        for post in post_dict[user]:
+            print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
 
-        with open("posts.txt", "r") as f:
-            post_list = f.read().splitlines()
+            r = requests.get(post)
+            post_df = bs4_parse(r.text)
 
-        file_path = get_file_path(timestamp, prefix="posts")
+            if comments:
+                print("Scraping comments")
 
-        for post in post_list:
+                if not driver:
+                    driver = load_driver()
 
-            df = scrape_post(driver, post)
+                driver.get(post)
+                sleep(2)
+                comments_df = scrape_comments(driver, replies=replies)
 
-            save_dataframe(df, file_path)
+                try:
+                    post_df = pd.concat([post_df] * len(comments_df.index))  # Repeat the post_df rows to match the comments count
+                    post_df = pd.concat([post_df, comments_df], axis=1)  # Join the two dataframes together, side to side horizontally
 
-        print(f"Comments exported: {file_path}")
+                except ValueError:  # Empty df
+                    pass
 
-    if kwargs['scraping_mode'] == "master_file":
-
-        print("Getting user list")
-        with open("users.txt", "r") as file:
-            userlist = file.read().splitlines()
-
-        print("Reading master file")
-        posts = posts_from_master(userlist, kwargs["period"])
-
-        print("Scraping posts")
-
-        for post in posts:
-
-            user, link = post
-
-            file_path = get_file_path(timestamp, prefix=user)
-            df = scrape_post(driver, link)
-            save_dataframe(df, file_path)
-
-        print(f"Comments exported")
-
-    driver.quit()
+            save_dataframe(post_df, dest_path)
+            print(f"Database saved: {dest_path}\n")
 
 
-if __name__ == '__main__':
-
-    default_config = {'scraping_mode': 'master_file',
-                      'period': (0, datetime.timestamp(datetime.now()))}
-
-    main(**default_config)
+if __name__ == "__main__":
+    config = read_config()
+    main(**config)
