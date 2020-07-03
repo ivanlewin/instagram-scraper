@@ -345,7 +345,8 @@ def main(**kwargs):
             save_dataframe(post_df, dest_path)
             print(f"Database saved: {dest_path}\n")
     
-    driver.quit()
+    if driver:
+        driver.quit()
 
 
 if __name__ == "__main__":
