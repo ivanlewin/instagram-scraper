@@ -38,7 +38,9 @@ Se pueden instalar corriendo los siguientes comandos en una consola.
 #### Descargar el driver
 Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geckodriver`](https://github.com/mozilla/geckodriver/releases/tag/v0.26.0), extraer el archivo `.zip` y colocar el archivo (`chromedriver` o `geckodriver.exe`) dentro de la carpeta **scripts**.
 
-## Uso:
+## Agregar los posteos a scrapear:
+#### Manualmente:
+
 1. Crear un archivo txt para cada usuario cuyos posts se quieren scrapear en la carpeta **posts**. Colocar dentro de cada archivo los links de los posteos de ese usuario que se quieren scrapear (uno por línea).
 
     La carpeta del proyecto debería tener la siguiente estructura:
@@ -69,8 +71,8 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
     ![instagram.txt](https://i.imgur.com/gNpNjKC.png)
 
 
+## Correr el scraper
 1. Modificar el archivo [config.txt](./scripts/config.txt) de la carpeta **scripts** de acuerdo a lo que se quiera scrapear. Los valores posibles son `True` o `False`.  
-
 1. Abrir una consola y navegar hasta la carpeta **instagram_scraper**. Esto se puede hacer con el comando `cd`.
 1. Correr el archivo [scraper.py](./scripts/scraper.py). Esto se puede hacer con el comando `python ./scripts/scraper.py`.  
 
