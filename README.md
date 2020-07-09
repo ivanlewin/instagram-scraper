@@ -89,16 +89,19 @@ Todas las entradas (filas) poseen la [información del posteo](#datos-de-los-pos
 ```
 Columna                 Tipo        Descripción
 -------------------------------------------------
+p_comments_count        (int)    -  Cantidad total de comentarios (incluye replies).
 p_caption¹              (string) -  Descripción del posteo
-p_ig_id                 (string) -  Identificador interno del posteo en Instagram
+p_ig_id                 (string) -  ID interno del posteo en Instagram
+p_is_comment_enabled    (bool)   -  (True / False)
 p_like_count            (int)    -  Cantidad de likes del posteo
 p_media_type            (string) -  Tipo del posteo (IMAGE / CAROUSEL_ALBUM / VIDEO)
+p_owner                 (string) -  ID del autor del posteo
 p_shortcode³            (string) -  Código del posteo. Aparece en la URL.
 p_timestamp²            (Date)   -  Fecha y/o hora de publicación del posteo
-p_username              (string) -  Autor del posteo
+p_username              (string) -  Nombre de usuario del autor del posteo
 p_views_count¹          (int)    -  Cantidad de vistas de los posteos de tipo 'VIDEO'
 p_location¹             (string) -  Nombre de la ubicación del posteo
-p_location_id¹          (string) -  Identificador de la ubicación del posteo
+p_location_id¹          (string) -  ID de la ubicación del posteo
 ```
 
 ¹. Estos campos estarán vacíos si el posteo no posee esa información.  
@@ -110,12 +113,12 @@ p_location_id¹          (string) -  Identificador de la ubicación del posteo
 ```
 Columna                 Tipo        Descripción
 -------------------------------------------------
-c_username              (string) -  Autor del comentario
+c_username              (string) -  Nombre de usuario del autor del comentario
 c_timestamp             (Date)   -  Fecha y hora de publicación del comentario
 c_text                  (string) -  Texto del comentario
 c_like_count            (int)    -  Cantidad de likes del comentario
-c_id¹                   (string) -  Identificador del comentario. Aparece en la URL.
-c_parent_id²            (string) -  Identificador del comentario padre del thread. Aparece en la URL.
+c_id¹                   (string) -  ID del comentario. Aparece en la URL.
+c_parent_id²            (string) -  ID del comentario padre del thread. Aparece en la URL.
 ```
 ¹. Ejemplo: www<span>.instagram.com/p/**p_shortcode**/c/**c_id**.  
 ². Campo vacío a menos que el comentario sea una respuesta a otro.  
