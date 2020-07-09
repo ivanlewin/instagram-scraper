@@ -1,4 +1,4 @@
-# instagram_scraper
+# instagram-scraper
 
 Esta herramienta escrita en Python permite obtener métricas y  comentarios de uno o más posteos de Instagram.
 
@@ -119,6 +119,9 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
     Por ejemplo, si la carpeta con mi proyecto estuviera en el escritorio, la consola debería aparecer así:
 
         C:\Users\Ivan\Escritorio\instagram_scraper> python ./scripts/posts_from_xlsx.py
+
+
+**Nota**: Si al correr el script ya existe un archivo con el nombre del usuario, los posteos del excel se agregarán al final del mismo.
 
 ## Correr el scraper
 
