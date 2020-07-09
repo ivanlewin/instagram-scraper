@@ -106,7 +106,7 @@ p_location_id¹          (string) -  ID de la ubicación del posteo
 
 ¹. Estos campos estarán vacíos si el posteo no posee esa información.  
 ². En algunos posteos el scraper no está pudiendo obtener esa información.  
-³. Ejemplo: www<span>.instagram.com/p/**p_shortcode**.
+³. Ejemplo: <code>www.instagram.com/p/**p_shortcode**</code>.
 
 
 #### Datos de los comentarios
@@ -117,12 +117,13 @@ c_username              (string) -  Nombre de usuario del autor del comentario
 c_timestamp             (Date)   -  Fecha y hora de publicación del comentario
 c_text                  (string) -  Texto del comentario
 c_like_count            (int)    -  Cantidad de likes del comentario
-c_id¹                   (string) -  ID del comentario. Aparece en la URL.
-c_parent_id²            (string) -  ID del comentario padre del thread. Aparece en la URL.
+c_id¹                   (string) -  ID del comentario (o del padre del hilo). Aparece en la URL.
+c_reply_id²             (string) -  ID del comentario si es una reply. Aparece en la URL.
 ```
-¹. Ejemplo: www<span>.instagram.com/p/**p_shortcode**/c/**c_id**.  
-². Campo vacío a menos que el comentario sea una respuesta a otro.  
-Ejemplo: www<span>.instagram.com/p/**p_shortcode**/c/**c_id**/r/**c_parent_id**.  
+¹. Si es un comentario, será el ID. Si es una reply, será el ID del comentario padre del hilo.  
+². Si es un comentario, estará vacío. Si es una reply, será el ID de la reply. Ejemplos:  
+Comentario: <code>www.instagram.com/p/**p_shortcode**/c/**c_id**/</code>.  
+Reply: <code>www.instagram.com/p/**p_shortcode**/c/**c_id**/r/**c_reply_id**</code>.  
 
 <!-- #### Configuración de selenium -->
 
