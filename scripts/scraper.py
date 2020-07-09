@@ -64,12 +64,12 @@ def bs4_parse(post_html):
     except IndexError:  # No caption
         pass
 
-    post_ig_id = post_json["id"]
+    post_ig_id = str(post_json["id"])
     post_is_comment_enabled = not (post_json["comments_disabled"])
     post_like_count = int(post_json["edge_media_preview_like"]["count"])
     post_shortcode = post_json["shortcode"]
     post_username = post_json["owner"]["username"]
-    post_owner = post_json["owner"]["id"]
+    post_owner = str(post_json["owner"]["id"])
 
     try:
         post_location = post_json["location"]["name"]
@@ -219,10 +219,10 @@ def scrape_comments(driver, replies=False):
             permalink = info.find_element_by_css_selector("a")
             m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute("href"))
             if m[2]:
-                comment_id = m[2]
-                comment_parent_id = m[1]
+                comment_id = str(m[2])
+                comment_parent_id = str(m[1])
             else:
-                comment_id = m[1]
+                comment_id = str(m[1])
 
             comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
             comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
