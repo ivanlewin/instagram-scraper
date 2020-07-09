@@ -1,4 +1,4 @@
-openpyxl
-pandas
 bs4
 selenium
+openpyxl
+pandas

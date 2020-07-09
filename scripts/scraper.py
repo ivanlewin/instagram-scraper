@@ -127,6 +127,8 @@ def bs4_parse(post_html):
     post_df["p_location"] = [post_location]
     post_df["p_location_id"] = [post_location_id]
 
+    post_df = post_df.astype({"p_ig_id" : object, "p_owner" : object, "p_location_id" : object})
+
     return post_df
 
 
@@ -208,7 +210,7 @@ def scrape_comments(driver, replies=False):
 
     def get_comment_info(comment):
 
-        comment_id = comment_parent_id = comment_timestamp = comment_username = comment_text = comment_like_count = None
+        comment_id = comment_reply_id = comment_timestamp = comment_username = comment_text = comment_like_count = None
 
         try:
             comment_username = comment.find_element_by_css_selector("h3 a").text
@@ -218,11 +220,8 @@ def scrape_comments(driver, replies=False):
 
             permalink = info.find_element_by_css_selector("a")
             m = match(r"(?:https:\/\/www\.instagram\.com\/p\/.+)\/c\/(\d+)(?:\/)(?:r\/(\d+)\/)?", permalink.get_attribute("href"))
-            if m[2]:
-                comment_id = m[2]
-                comment_parent_id = m[1]
-            else:
-                comment_id = m[1]
+            comment_id = m[1]
+            comment_reply_id = m[2]
 
             comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
             comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
@@ -244,10 +243,10 @@ def scrape_comments(driver, replies=False):
             "c_text": [comment_text],
             "c_like_count": [comment_like_count],
             "c_id": [comment_id],
-            "c_parent_id": [comment_parent_id],
+            "c_reply_id": [comment_reply_id],
         })
 
-        comment_df = comment_df.astype({"c_id": object, "c_parent_id": object, })
+        comment_df = comment_df.astype({"c_id" : object, "c_reply_id" : object})
 
         return comment_df
 
