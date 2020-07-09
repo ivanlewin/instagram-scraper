@@ -125,7 +125,3 @@ c_reply_id²             (string) -  ID del comentario si es una reply. Aparece 
 ². Si es un comentario, estará vacío. Si es una reply, será el ID de la reply. Ejemplos:  
 Comentario: <code>www.instagram.com/p/**p_shortcode**/c/**c_id**/</code>.  
 Reply: <code>www.instagram.com/p/**p_shortcode**/c/**c_id**/r/**c_reply_id**</code>.  
-
-<!-- #### Configuración de selenium -->
-
-<!-- ¹²³⁴⁵⁶⁷⁸⁹⁰ -->
