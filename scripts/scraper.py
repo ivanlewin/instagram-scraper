@@ -64,12 +64,12 @@ def bs4_parse(post_html):
     except IndexError:  # No caption
         pass
 
-    post_ig_id = str(post_json["id"])
+    post_ig_id = post_json["id"]
     post_is_comment_enabled = not (post_json["comments_disabled"])
     post_like_count = int(post_json["edge_media_preview_like"]["count"])
     post_shortcode = post_json["shortcode"]
     post_username = post_json["owner"]["username"]
-    post_owner = str(post_json["owner"]["id"])
+    post_owner = post_json["owner"]["id"]
 
     try:
         post_location = post_json["location"]["name"]
@@ -126,6 +126,8 @@ def bs4_parse(post_html):
     post_df["p_views_count"] = [post_views_count]
     post_df["p_location"] = [post_location]
     post_df["p_location_id"] = [post_location_id]
+
+    post_df = post_df.astype({"p_ig_id" : object, "p_owner" : object, "p_location_id" : object})
 
     return post_df
 
