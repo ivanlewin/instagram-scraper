@@ -1,15 +1,11 @@
 import pandas as pd
 import openpyxl
 
-# Base de posteos
 archivo = ""
-
 skip_row = 10
-
-# Columna de Links. ej: 'A' = 1, 'B' = 2...
 columna = 12
 
-# Escribir el valor del hipervínculo en la celda
+# Escribe el valor del hipervínculo en la celda
 wb = openpyxl.load_workbook(archivo)
 ws = wb['Top 10 Posts']
 for row in ws.iter_rows(min_row=skip_row, min_col=columna, max_col=columna):
@@ -20,17 +16,17 @@ for row in ws.iter_rows(min_row=skip_row, min_col=columna, max_col=columna):
             pass
 wb.save(archivo)
 
-# Abrir archivo en pandas, y seleccionar los posteos de instagram de cada usuario
-posteos = pd.read_excel(archivo, skiprows=10)
+# Carga el archivo con pandas
+posteos = pd.read_excel(archivo, skiprows=skip_row)
 posteos = posteos.loc[posteos['Network'] == "INSTAGRAM"]
 posteos = posteos.drop("Network", axis=1)
 posteos = posteos[["Page", "Link"]]
 
 # Reemplazar nombres de las páginas por sus usuarios de ig
-# posteos["Page"] = ["googlemaps" if "Google Maps" in p else p for p in posteos["Page"]]
+posteos["Page"] = ["" if "" in p else p for p in posteos["Page"]]
 
 
-# Archivos txt
+# Genera los archivos txt con los posteos de cada usuario
 for p in posteos["Page"]:
     links = posteos.loc[posteos["Page"] == p]["Link"].tolist()
     file = f"./posts/{p}.txt"
