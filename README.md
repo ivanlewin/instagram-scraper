@@ -2,7 +2,7 @@
 
 Esta herramienta escrita en Python permite obtener métricas y  comentarios de uno o más posteos de Instagram.
 
-Para obtener las métricas del posteo, se hace una request HTTP con la librería `requests` de Python y se parsea el HTML recibido con la librería [`beautifulsoup4`](https://pypi.org/project/beautifulsoup4/).
+Para obtener la información del posteo, se hace una request HTTP con la librería `requests` de Python y se parsea el HTML recibido con la librería [`beautifulsoup4`](https://pypi.org/project/beautifulsoup4/).
 
 Para obtener los comentarios es necesario emular un navegador web, y para ello se utiliza la librería [`selenium`](https://pypi.org/project/selenium/). Selenium utiliza un *webdriver* (una versión del navegador apta para ser controlada y automatizada mediante comandos) que puede ser el `chromedriver` (para utilizar Google Chrome) o el `geckodriver` (para utilizar Mozilla Firefox).  
 Si el usuario ya tiene instalado uno de estos navegadores en su equipo puede optar por usar selenium con su perfil (ver [configuración de selenium](#sconfiguración-de-selenium)).
@@ -53,6 +53,7 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
         |       .gitkeep
         |
         \---posts
+        |       .gitkeep
         |       instagram.txt
         |       cristiano.txt
         |       arianagrande.txt
