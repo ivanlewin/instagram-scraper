@@ -78,9 +78,7 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
 
         C:\Users\Ivan\Escritorio\instagram_scraper> python ./scripts/scraper.py
   
-  
-<br/><br/>
-El script buscará los archivos de texto en la carpeta **posts** y obtendrá la información de los posteos indicados dentro de cada archivo.
+El script leerá todos los archivos de texto en la carpeta **posts** y obtendrá la información de los posteos indicados dentro de cada archivo.
 
 ## Output
 El scrapeo generará un archivo `.csv` por cada usuario, con la información de todos sus posteos.  
