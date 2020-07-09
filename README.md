@@ -25,11 +25,11 @@ Si el usuario ya tiene instalado uno de estos navegadores en su equipo puede opt
 1. Instalar las librerías `beautifulsoup4` y `selenium`.
 Se pueden instalar corriendo los siguientes comandos en una consola.  
 
-    ```
+    ```bash
     pip install beautifulsoup4
     ```
 
-    ```
+    ```bash
     pip install selenium
     ```
 
