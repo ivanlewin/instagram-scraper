@@ -24,7 +24,7 @@ Para cargar los posteos automáticamente desde un archivo Excel de fanpage, se u
 1. Descargar este proyecto [acá](https://github.com/ivanlewin/instagram-scraper/archive/master.zip) y extraer el archivo `.zip`.  
 
 1. Descargar e instalar [Python](https://www.python.org/downloads/). Asegurarse de marcar la opción para 'Agregar Python al PATH'.
-1. Instalar las librerías `beautifulsoup4`, `selenium`, `openpyxl` y `pandas`.
+1. Instalar las librerías `beautifulsoup4`, `selenium`, `openpyxl`, `pandas` y `xlrd`.
 Se pueden instalar corriendo los siguientes comandos en una consola.  
 
     ```bash
@@ -41,6 +41,10 @@ Se pueden instalar corriendo los siguientes comandos en una consola.
 
     ```bash
     pip install pandas
+    ```
+    
+    ```bash
+    pip install xlrd
     ```
 
 1. [Descargar el driver](#descargar-el-driver).
