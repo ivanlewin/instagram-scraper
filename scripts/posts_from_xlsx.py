@@ -30,6 +30,6 @@ posteos["Page"] = ["" if "" in p else p for p in posteos["Page"]]
 for p in posteos["Page"]:
     links = posteos.loc[posteos["Page"] == p]["Link"].tolist()
     file = f"./posts/{p}.txt"
-    with open(file, "a") as f:
+    with open(file, "w") as f:
         for link in links:
             f.write(f"{link}\n")

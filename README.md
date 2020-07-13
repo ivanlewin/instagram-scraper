@@ -125,7 +125,7 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
         C:\Users\Ivan\Escritorio\instagram_scraper> python ./scripts/posts_from_xlsx.py
 
 
-**Nota**: Si al correr el script ya existe un archivo con el nombre del usuario, los posteos del excel se agregarán al final del mismo.
+**Nota**: Si al correr el script ya existe un archivo con el nombre del usuario, se sobreescribirá el archivo.
 
 ## Correr el scraper
 
