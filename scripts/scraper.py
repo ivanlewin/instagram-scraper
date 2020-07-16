@@ -91,25 +91,11 @@ def bs4_parse(post_html):
         post_views_count = post_json["video_view_count"]
     except KeyError:  # Catch KeyError for non-video posts
         pass
-
-    # On some posts there is a script that contains the full timestamp info, ISO8601 formatted
+    
     try:
-        timestamp_string = soup.select("script[type='application/ld+json']")[0].string
-        timestamp_json = json.loads(timestamp_string)
-        timestamp = timestamp_json["uploadDate"]
-        post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S")
-    except IndexError:
-        try:
-            if post_media_type == "IMAGE":
-                date = post_json["accessibility_caption"]
-            elif post_media_type == "CAROUSEL_ALBUM":
-                date = post_json["edge_sidecar_to_children"]["edges"][0]["node"]["accessibility_caption"]
-            else:
-                date = post_json["accessibility_caption"]
-            m = match(r"^.* on (.*, \d{4})", date)
-            post_timestamp = datetime.strptime(m[1], "%B %d, %Y")
-        except:
-            pass
+        post_timestamp = datetime.fromtimestamp(post_json["taken_at_timestamp"])
+    except KeyError:
+        pass
 
     # Fill dataframe with values, which will be None if not found
     post_df["p_comments_count"] = [post_comments_count]
