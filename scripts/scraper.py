@@ -66,36 +66,29 @@ def bs4_parse(post_html):
     except IndexError:  # No caption
         pass
 
-    post_ig_id = post_json["id"]
-    post_is_comment_enabled = not (post_json["comments_disabled"])
-    post_like_count = int(post_json["edge_media_preview_like"]["count"])
-    post_shortcode = post_json["shortcode"]
-    post_username = post_json["owner"]["username"]
-    post_owner = post_json["owner"]["id"]
+    post_ig_id = post_json.get("id")
 
-    try:
-        post_location = post_json["location"]["name"]
-        post_location_id = post_json["location"]["id"]
-    except TypeError:  # Catch TypeError when post_json["location"] is None
-        pass
-
-    media_type = post_json["__typename"]
-    if media_type == "GraphImage":
-        post_media_type = "IMAGE"
-    elif media_type == "GraphSidecar":
-        post_media_type = "CAROUSEL_ALBUM"
-    else:
-        post_media_type = "VIDEO"
-
-    try:
-        post_views_count = post_json["video_view_count"]
-    except KeyError:  # Catch KeyError for non-video posts
-        pass
+    comments_enabled = post_json.get("comments_disabled")
+    if comments_enabled : post_is_comment_enabled = not(comments_enabled)
     
-    try:
-        post_timestamp = datetime.fromtimestamp(post_json["taken_at_timestamp"])
-    except KeyError:
-        pass
+    like_count = post_json.get("edge_media_preview_like").get("count")
+    if like_count: post_like_count = int(like_count)
+    post_shortcode = post_json.get("shortcode")
+    post_username = post_json.get("owner").get("username")
+    post_owner = post_json.get("owner").get("id")
+
+    post_location = post_json.get("location").get("name")
+    post_location_id = post_json.get("location").get("id")
+
+    media_type = post_json.get("__typename")
+    if media_type == "GraphImage": post_media_type = "IMAGE"
+    elif media_type == "GraphSidecar": post_media_type = "CAROUSEL_ALBUM"
+    elif media_type == "GraphVideo": post_media_type = "VIDEO"
+
+    post_views_count = post_json.get("video_view_count")
+    
+    timestamp = post_json.get("taken_at_timestamp")
+    if timestamp: post_timestamp = datetime.fromtimestamp(timestamp)
 
     # Fill dataframe with values, which will be None if not found
     post_df["p_comments_count"] = [post_comments_count]
@@ -285,8 +278,6 @@ def main(**kwargs):
     comments = kwargs.get("comments")
     replies = kwargs.get("replies")
     output_folder = kwargs.get("custom_folder")
-    return
-
     
     timestamp = datetime.now().strftime(r"%Y%m%d")
     
