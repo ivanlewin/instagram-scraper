@@ -290,19 +290,7 @@ def get_file_path(timestamp, prefix):
     return file_path
 
 
-def posts_from_master(userlist, period):
 
-    master_path = os.path.abspath("../dictionaries/posts/master.csv")
-    master_df = pd.read_csv(master_path)
-
-    since_ts, until_ts = period
-
-    filtered_df = master_df.loc[master_df["p_username"].isin(userlist)]
-    filtered_df = filtered_df[filtered_df["p_date"].between(since_ts, until_ts)]
-
-    filtered_df = filtered_df.drop(columns=["p_shortcode", "p_date"])
-
-    posts = list(filtered_df.to_records(index=False))
 
     return posts
 
