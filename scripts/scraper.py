@@ -295,14 +295,18 @@ def get_file_path(timestamp, prefix, output_folder):
 
 def main(**kwargs):
 
+    # read kwargs arguments
     comments = kwargs.get("comments")
     replies = kwargs.get("replies")
     output_folder = kwargs.get("custom_folder")
     return
 
+    
     timestamp = datetime.now().strftime(r"%Y%m%d")
+    
     post_dict = read_posts()
-    driver = None
+    
+    driver = None # Initialize driver to None to check for it before loading it (line)
 
     for user in post_dict:
         
@@ -311,6 +315,7 @@ def main(**kwargs):
         for post in post_dict[user]:
             print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
 
+            # make html request and parse with bs4
             r = requests.get(post)
             post_df = bs4_parse(r.text)
 
