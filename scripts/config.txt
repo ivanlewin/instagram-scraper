@@ -1,3 +1,7 @@
 [comments]
 comments = True
 replies = True
+
+[output]
+# relative to instagram-scraper directory
+folder = 

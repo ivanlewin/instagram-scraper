@@ -20,10 +20,12 @@ def read_config():
 
     comments = config.getboolean("comments", "comments")
     replies = config.getboolean("comments", "replies")
+    custom_folder = config.get("output", "folder")
 
     settings = {
         "comments": comments,
         "replies": replies,
+        "custom_folder" : custom_folder,
     }
 
     return settings
@@ -279,32 +281,32 @@ def save_dataframe(df, path):
         df.to_csv(path, index=False)
 
 
-def get_file_path(timestamp, prefix):
+def get_file_path(timestamp, prefix, output_folder):
 
-    folder = os.path.abspath("./csv")
+    # use output_folder if it's not None, else default folder
+    folder = os.path.abspath(output_folder) if output_folder else os.path.abspath("./csv")
+
     if not os.path.exists(folder):
         os.mkdir(folder)
+
     filename = f"{prefix}_{timestamp}.csv"
-    file_path = os.path.join(folder, filename)
 
-    return file_path
-
-
-
-
-    return posts
+    return os.path.join(folder, filename)
 
 def main(**kwargs):
 
     comments = kwargs.get("comments")
     replies = kwargs.get("replies")
+    output_folder = kwargs.get("custom_folder")
+    return
+
     timestamp = datetime.now().strftime(r"%Y%m%d")
     post_dict = read_posts()
     driver = None
 
     for user in post_dict:
-
-        dest_path = get_file_path(timestamp, user)
+        
+        dest_path = get_file_path(output_folder, timestamp, user)
 
         for post in post_dict[user]:
             print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
