@@ -308,10 +308,10 @@ def posts_from_master(userlist, period):
 
 def main(**kwargs):
 
+    comments = kwargs.get("comments")
+    replies = kwargs.get("replies")
     timestamp = datetime.now().strftime(r"%Y%m%d")
     post_dict = read_posts()
-    comments = kwargs["comments"]
-    replies = kwargs["replies"]
     driver = None
 
     for user in post_dict:
