@@ -61,7 +61,8 @@ def bs4_parse(response_html):
     except KeyError: # Possibly a private post 
         post_json = post_info["entry_data"]["ProfilePage"][0]["graphql"]["user"]
 
-    post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
+    comments_count = post_json.get("edge_media_to_parent_comment").get("count")
+    if comments_count : post_comments_count = int(comments_count)
 
     try:
         post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
@@ -71,16 +72,21 @@ def bs4_parse(response_html):
     post_ig_id = post_json.get("id")
 
     comments_enabled = post_json.get("comments_disabled")
-    if comments_enabled : post_is_comment_enabled = not(comments_enabled)
+    if comments_enabled != None : post_is_comment_enabled = not(comments_enabled)
     
     like_count = post_json.get("edge_media_preview_like").get("count")
     if like_count: post_like_count = int(like_count)
     post_shortcode = post_json.get("shortcode")
-    post_username = post_json.get("owner").get("username")
-    post_owner = post_json.get("owner").get("id")
 
-    post_location = post_json.get("location").get("name")
-    post_location_id = post_json.get("location").get("id")
+    owner = post_json.get("owner")
+    if owner:
+        post_username = owner.get("username")
+        post_owner = owner.get("id")
+
+    location = post_json.get("location")
+    if location:
+        post_location = location.get("name")
+        post_location_id = location.get("id")
 
     media_type = post_json.get("__typename")
     if media_type == "GraphImage": post_media_type = "IMAGE"
