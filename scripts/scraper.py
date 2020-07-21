@@ -268,7 +268,7 @@ def save_dataframe(df, path):
         df.to_csv(path, index=False)
 
 
-def get_file_path(timestamp, prefix, output_folder):
+def get_file_path(prefix, output_folder, timestamp=datetime.now().strftime(r"%Y%m%d")):
 
     # use output_folder if it's not None, else default folder
     folder = os.path.abspath(output_folder) if output_folder else os.path.abspath("./csv")
@@ -280,6 +280,7 @@ def get_file_path(timestamp, prefix, output_folder):
 
     return os.path.join(folder, filename)
 
+
 def main(**kwargs):
 
     # read kwargs arguments
@@ -287,15 +288,13 @@ def main(**kwargs):
     replies = kwargs.get("replies")
     output_folder = kwargs.get("custom_folder")
     
-    timestamp = datetime.now().strftime(r"%Y%m%d")
-    
     post_dict = read_posts()
     
     driver = None # Initialize driver to None to check for it before loading it (line)
 
     for user in post_dict:
         
-        dest_path = get_file_path(output_folder, timestamp, user)
+        dest_path = get_file_path(user, output_folder)
 
         for post in post_dict[user]:
             print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
