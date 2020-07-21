@@ -53,10 +53,8 @@ def bs4_parse(response_html):
     # Search for a script that contains the post metadata
     for script in soup.select("script[type='text/javascript']"):
         if (script.string and script.string.startswith("window._sharedData")):
-            json_string = script.string.replace("window._sharedData = ", "")
-            json_string = json_string[:-1]
-            json_object = json.loads(json_string)
-            post_json = json_object["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
+            json_string = script.string.replace("window._sharedData = ", "")[:-1]
+            post_info = json.loads(json_string)
 
     post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
 
