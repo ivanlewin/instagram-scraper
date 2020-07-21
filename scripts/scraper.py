@@ -290,7 +290,7 @@ def main(**kwargs):
     
     post_dict = read_posts()
     
-    driver = None # Initialize driver to None to check for it before loading it (line)
+    driver = None # Initialize driver to None to check for it before loading it (before driver.get(post))
 
     for user in post_dict:
         
