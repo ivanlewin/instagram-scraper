@@ -55,6 +55,11 @@ def bs4_parse(response_html):
         if (script.string and script.string.startswith("window._sharedData")):
             json_string = script.string.replace("window._sharedData = ", "")[:-1]
             post_info = json.loads(json_string)
+    
+    try:
+        post_json = post_info["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
+    except KeyError: # Possibly a private post 
+        post_json = post_info["entry_data"]["ProfilePage"][0]["graphql"]["user"]
 
     post_comments_count = int(post_json["edge_media_to_parent_comment"]["count"])
 
