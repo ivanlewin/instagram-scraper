@@ -12,6 +12,52 @@ from selenium.common.exceptions import NoSuchElementException, StaleElementRefer
 from time import sleep
 
 
+def main(**kwargs):
+
+    # read kwargs arguments
+    comments = kwargs.get("comments")
+    replies = kwargs.get("replies")
+    output_folder = kwargs.get("custom_folder")
+    
+    post_dict = read_posts()
+    
+    driver = None # Initialize driver to None to check for it before loading it (before driver.get(post))
+
+    for user in post_dict:
+        
+        dest_path = get_file_path(user, output_folder)
+
+        for post in post_dict[user]:
+            print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
+
+            # make html request and parse with bs4
+            r = requests.get(post)
+            post_df = bs4_parse(r.text)
+
+            if comments:
+                print("Scraping comments")
+
+                if not driver:
+                    driver = load_driver()
+
+                driver.get(post)
+                sleep(2)
+                comments_df = scrape_comments(driver, replies=replies)
+
+                try:
+                    post_df = pd.concat([post_df] * len(comments_df.index))  # Repeat the post_df rows to match the comments count
+                    post_df = pd.concat([post_df, comments_df], axis=1)  # Join the two dataframes together, side to side horizontally
+
+                except ValueError:  # Empty df
+                    pass
+
+            save_dataframe(post_df, dest_path)
+            print(f"Database saved: {dest_path}\n")
+    
+    if driver:
+        driver.quit()
+
+        
 def read_config():
 
     config = ConfigParser()
@@ -279,52 +325,6 @@ def get_file_path(prefix, output_folder, timestamp=datetime.now().strftime(r"%Y%
     filename = f"{prefix}_{timestamp}.csv"
 
     return os.path.join(folder, filename)
-
-
-def main(**kwargs):
-
-    # read kwargs arguments
-    comments = kwargs.get("comments")
-    replies = kwargs.get("replies")
-    output_folder = kwargs.get("custom_folder")
-    
-    post_dict = read_posts()
-    
-    driver = None # Initialize driver to None to check for it before loading it (before driver.get(post))
-
-    for user in post_dict:
-        
-        dest_path = get_file_path(user, output_folder)
-
-        for post in post_dict[user]:
-            print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
-
-            # make html request and parse with bs4
-            r = requests.get(post)
-            post_df = bs4_parse(r.text)
-
-            if comments:
-                print("Scraping comments")
-
-                if not driver:
-                    driver = load_driver()
-
-                driver.get(post)
-                sleep(2)
-                comments_df = scrape_comments(driver, replies=replies)
-
-                try:
-                    post_df = pd.concat([post_df] * len(comments_df.index))  # Repeat the post_df rows to match the comments count
-                    post_df = pd.concat([post_df, comments_df], axis=1)  # Join the two dataframes together, side to side horizontally
-
-                except ValueError:  # Empty df
-                    pass
-
-            save_dataframe(post_df, dest_path)
-            print(f"Database saved: {dest_path}\n")
-    
-    if driver:
-        driver.quit()
 
 
 if __name__ == "__main__":
