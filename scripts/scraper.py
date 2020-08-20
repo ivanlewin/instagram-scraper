@@ -62,7 +62,7 @@ def read_config():
     settings = {
         "comments": comments,
         "replies": replies,
-        "custom_folder" : custom_folder if custom_folder else None,
+        "custom_folder": custom_folder if custom_folder != "" else None,
     }
 
     return settings
