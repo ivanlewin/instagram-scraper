@@ -81,85 +81,6 @@ def read_posts():
     return posts
 
 
-def bs4_parse(response_html):
-
-    # Initialize dataframe instance, and set post metadata to None
-    post_df = pd.DataFrame()
-    post_comments_count = post_caption = post_ig_id = post_is_comment_enabled = post_like_count = post_media_type = post_owner = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
-
-    soup = BeautifulSoup(response_html, "html.parser")
-
-    # Search for a script that contains the post metadata
-    for script in soup.select("script[type='text/javascript']"):
-        if (script.string and script.string.startswith("window._sharedData")):
-            json_string = script.string.replace("window._sharedData = ", "")[:-1]
-            post_info = json.loads(json_string)
-    
-    try:
-        post_json = post_info["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
-    except KeyError: # Possibly a private post 
-        post_json = post_info["entry_data"]["ProfilePage"][0]["graphql"]["user"]
-
-    comments_count = post_json.get("edge_media_to_parent_comment").get("count")
-    if comments_count : post_comments_count = int(comments_count)
-
-    try:
-        post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
-    except IndexError:  # No caption
-        pass
-
-    post_ig_id = post_json.get("id")
-
-    comments_enabled = post_json.get("comments_disabled")
-    if comments_enabled != None : post_is_comment_enabled = not(comments_enabled)
-    
-    like_count = post_json.get("edge_media_preview_like").get("count")
-    if like_count: post_like_count = int(like_count)
-    post_shortcode = post_json.get("shortcode")
-
-    owner = post_json.get("owner")
-    if owner:
-        post_username = owner.get("username")
-        post_owner = owner.get("id")
-
-    location = post_json.get("location")
-    if location:
-        post_location = location.get("name")
-        post_location_id = location.get("id")
-
-    media_type = post_json.get("__typename")
-    if media_type == "GraphImage": post_media_type = "IMAGE"
-    elif media_type == "GraphSidecar": post_media_type = "CAROUSEL_ALBUM"
-    elif media_type == "GraphVideo": post_media_type = "VIDEO"
-
-    post_views_count = post_json.get("video_view_count")
-    
-    timestamp = post_json.get("taken_at_timestamp")
-    if timestamp: post_timestamp = datetime.fromtimestamp(timestamp)
-
-    # Fill dataframe with values, which will be None if not found
-    post_df["p_comments_count"] = [post_comments_count]
-    post_df["p_caption"] = [post_caption]
-    # post_df["p_id"] = [post_id]
-    post_df["p_ig_id"] = [post_ig_id]
-    post_df["p_is_comment_enabled"] = [post_is_comment_enabled]
-    post_df["p_like_count"] = [post_like_count]
-    post_df["p_media_type"] = [post_media_type]
-    # post_df["p_media_url"] = [post_media_url]
-    post_df["p_owner"] = [post_owner]
-    # post_df["p_permalink"] = [post_permalink]
-    post_df["p_shortcode"] = [post_shortcode]
-    post_df["p_timestamp"] = [post_timestamp]
-    post_df["p_username"] = [post_username]
-    post_df["p_views_count"] = [post_views_count]
-    post_df["p_location"] = [post_location]
-    post_df["p_location_id"] = [post_location_id]
-
-    post_df = post_df.astype({"p_ig_id" : object, "p_owner" : object, "p_location_id" : object})
-
-    return post_df
-
-
 def load_driver(driver="Firefox", existing_profile=False, profile=None):
     """Loads and returns a webdriver instance.
 
@@ -201,6 +122,93 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
             driver = webdriver.Chrome()
 
     return driver
+
+
+def scrape_post(post_html):
+
+    # Inicializo las columnas en None
+    post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
+
+    soup = BeautifulSoup(post_html, "html.parser")
+
+    # Selecciono el script que tiene la metadata del posteo
+    for script in soup.select("script[type='text/javascript']"):
+        if (script.string and script.string.startswith("window._sharedData")):
+            json_string = script.string.replace("window._sharedData = ", "")[:-1]
+            post_info = json.loads(json_string)
+
+    try:
+        post_json = post_info["entry_data"]["PostPage"][0]["graphql"]["shortcode_media"]
+    except KeyError:  # Puede que sea un posteo privado
+        post_json = post_info["entry_data"]["ProfilePage"][0]["graphql"]["user"]
+
+    comments_count = post_json.get("edge_media_to_parent_comment").get("count")
+    if comments_count:
+        post_comments_count = int(comments_count)
+
+    try:
+        post_caption = post_json["edge_media_to_caption"]["edges"][0]["node"]["text"]
+    except IndexError:  # Sin descripción
+        pass
+
+    post_ig_id = post_json.get("id")
+
+    comments_enabled = post_json.get("comments_disabled")
+    if comments_enabled is not None:
+        post_is_comment_enabled = not(comments_enabled)
+
+    like_count = post_json.get("edge_media_preview_like").get("count")
+    if like_count:
+        post_like_count = int(like_count)
+    post_shortcode = post_json.get("shortcode")
+
+    owner = post_json.get("owner")
+    if owner:
+        post_username = owner.get("username")
+        post_owner = owner.get("id")
+
+    location = post_json.get("location")
+    if location:
+        post_location = location.get("name")
+        post_location_id = location.get("id")
+
+    media_type = post_json.get("__typename")
+    if media_type == "GraphImage":
+        post_media_type = "IMAGE"
+    elif media_type == "GraphSidecar":
+        post_media_type = "CAROUSEL_ALBUM"
+    elif media_type == "GraphVideo":
+        post_media_type = "VIDEO"
+
+    post_views_count = post_json.get("video_view_count")
+
+    timestamp = soup.select_one(".c-Yi7 > time")["datetime"]
+    post_timestamp = datetime.strptime(timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
+
+    # armo el dataframe con la información scrapeada
+    post_df = pd.DataFrame({
+        "p_comments_count": [post_comments_count],
+        "p_caption": [post_caption],
+        "p_id": [post_id],
+        "p_ig_id": [post_ig_id],
+        "p_is_comment_enabled": [post_is_comment_enabled],
+        "p_like_count": [post_like_count],
+        "p_media_type": [post_media_type],
+        # "p_media_url": = [post_media_url],
+        "p_owner": [post_owner],
+        # "p_permalink": [post_permalink],
+        "p_shortcode": [post_shortcode],
+        "p_timestamp": [post_timestamp],
+        "p_username": [post_username],
+        "p_views_count": [post_views_count],
+        "p_location": [post_location],
+        "p_location_id": [post_location_id],
+    })
+
+    # cambio el datatype de las columnas de id a strings para que no los castee a numbers
+    post_df = post_df.astype({"p_ig_id": object, "p_owner": object, "p_location_id": object})
+
+    return post_df
 
 
 def scrape_comments(driver, replies=False):
