@@ -13,7 +13,7 @@ from time import sleep
 
 def main(**kwargs):
 
-    # read kwargs arguments
+    # config del txt
     comments = kwargs.get("comments")
     replies = kwargs.get("replies")
     output_folder = kwargs.get("custom_folder")
@@ -185,7 +185,7 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
 
             if not profile:
                 profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
-                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0])  # Selecting first profile in the folder
+                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0])  # Usa el primer perfil de la carpeta
 
             firefox_profile = webdriver.FirefoxProfile(profile_directory=profile)
             driver = webdriver.Firefox(firefox_profile)
@@ -198,7 +198,7 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
         if existing_profile:
 
             if not profile:
-                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data")  # Selects Default profile
+                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data")  # Usa el perfil por defecto
 
             options = webdriver.ChromeOptions()
             options.add_argument("user-data-dir=" + profile)
@@ -213,7 +213,7 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
 def scrape_comments(driver, replies=False):
 
     def load_comments():
-        """Clicks the "Load more comments" button until there are no more comments."""
+        """Clickea el boton de "Load more comments" hasta que no encuentre nuevos comments."""
         while True:
             try:
                 load_more_comments = driver.find_element_by_css_selector("button.dCJp8")
@@ -223,6 +223,7 @@ def scrape_comments(driver, replies=False):
                 break
 
     def load_replies():
+        """Clickea todos los botones de 'x reply(ies)' hasta que no encuentre ninguno."""
         try:
             view_replies_buttons = driver.find_elements_by_css_selector(".y3zKF")
 
@@ -245,6 +246,7 @@ def scrape_comments(driver, replies=False):
 
     def get_comment_info(comment):
 
+        # Inicializo las columnas en None
         comment_id = comment_reply_id = comment_timestamp = comment_username = comment_text = comment_like_count = None
 
         try:
@@ -260,7 +262,6 @@ def scrape_comments(driver, replies=False):
 
             comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
             comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
-            # comment_timestamp = datetime.timestamp(comment_timestamp)
 
             likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
@@ -281,7 +282,8 @@ def scrape_comments(driver, replies=False):
             "c_reply_id": [comment_reply_id],
         })
 
-        comment_df = comment_df.astype({"c_id" : object, "c_reply_id" : object})
+        # cambio el datatype de las columnas de id a strings para que no los castee a numbers
+        comment_df = comment_df.astype({"c_id": object, "c_reply_id": object})
 
         return comment_df
 
@@ -293,11 +295,11 @@ def scrape_comments(driver, replies=False):
 
     try:
         for comment in driver.find_elements_by_css_selector("ul.XQXOT > ul.Mr508 div.ZyFrc div.C4VMK"):
-            driver.execute_script("arguments[0].scrollIntoView();", comment)
+            driver.execute_script("arguments[0].scrollIntoView();", comment)  # scrollear hasta tener el comment en foco
             comment_df = get_comment_info(comment)
             comments_df = pd.concat([comments_df, comment_df])
 
-    except ValueError:  # empty df
+    except ValueError:  # df vacío
         pass
 
     return comments_df
@@ -316,8 +318,11 @@ def save_dataframe(df, path):
 
 def get_file_path(prefix, output_folder, timestamp=datetime.now().strftime(r"%Y%m%d")):
 
-    # use output_folder if it's not None, else default folder
-    folder = os.path.abspath(output_folder) if output_folder else os.path.abspath("./csv")
+    # usar la output_folder si la hay, o la carpeta "/csv" por defecto
+    if output_folder is not None:
+        folder = os.path.abspath(output_folder)
+    else:
+        folder = os.path.abspath("./csv")
 
     if not os.path.exists(folder):
         os.mkdir(folder)
