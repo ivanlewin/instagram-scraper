@@ -79,7 +79,8 @@ def read_config():
 def read_posts():
     posts = {}
     folder = "./posts"
-    for file in os.listdir(folder)[1:]:  # Ignore the .gitkeep file
+    files = [file for file in os.listdir(folder) if file != ".gitkeep"]  # Ignorar archivo .gitkeep
+    for file in files:
         user, _ = os.path.splitext(file)
         if user:
             with open(os.path.join(folder, file), "r") as f:
