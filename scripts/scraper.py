@@ -189,7 +189,7 @@ def scrape_post(post_html):
     post_df = pd.DataFrame({
         "p_comments_count": [post_comments_count],
         "p_caption": [post_caption],
-        "p_id": [post_id],
+        # "p_id": [post_id],
         "p_ig_id": [post_ig_id],
         "p_is_comment_enabled": [post_is_comment_enabled],
         "p_like_count": [post_like_count],
