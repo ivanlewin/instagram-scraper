@@ -19,42 +19,35 @@ def main(**kwargs):
     output_folder = kwargs.get("custom_folder")
 
     post_dict = read_posts()
-
-    driver = None  # Initialize driver to None to check for it before loading it (before driver.get(post))
+    driver = load_driver()
 
     for user in post_dict:
-        
-        dest_path = get_file_path(user, output_folder)
+
+        save_path = get_file_path(user, output_folder)
 
         for post in post_dict[user]:
-            print(f"User: {user} | Post {post_dict[user].index(post)+1}/{len(post_dict[user])}")
+            print(f"Usuario: {user} | Posteo {post_dict[user].index(post)+1}/{len(post_dict[user])}")
 
-            # make html request and parse with bs4
-            r = requests.get(post)
-            post_df = bs4_parse(r.text)
+            driver.get(post)
+            sleep(2)
+            post_df = scrape_post(driver.page_source)
 
             if comments:
-                print("Scraping comments")
+                print("Scrapeando comentarios")
 
-                if not driver:
-                    driver = load_driver()
-
-                driver.get(post)
-                sleep(2)
                 comments_df = scrape_comments(driver, replies=replies)
 
                 try:
-                    post_df = pd.concat([post_df] * len(comments_df.index))  # Repeat the post_df rows to match the comments count
-                    post_df = pd.concat([post_df, comments_df], axis=1)  # Join the two dataframes together, side to side horizontally
+                    post_df = pd.concat([post_df] * len(comments_df.index))  # Multiplicar la row del posteo por la cantidad de comments
+                    post_df = pd.concat([post_df, comments_df], axis=1)  # Unir los dataframes lado a lado horizontalmente
 
-                except ValueError:  # Empty df
+                except ValueError:  # Dataframe vacío
                     pass
 
-            save_dataframe(post_df, dest_path)
-            print(f"Database saved: {dest_path}\n")
+            save_dataframe(post_df, save_path)
+        print(f"Archivo guardado: {save_path}\n")
 
-    if driver:
-        driver.quit()
+    driver.quit()
 
 
 def read_config():
