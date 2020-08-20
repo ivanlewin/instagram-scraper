@@ -18,10 +18,10 @@ def main(**kwargs):
     comments = kwargs.get("comments")
     replies = kwargs.get("replies")
     output_folder = kwargs.get("custom_folder")
-    
+
     post_dict = read_posts()
-    
-    driver = None # Initialize driver to None to check for it before loading it (before driver.get(post))
+
+    driver = None  # Initialize driver to None to check for it before loading it (before driver.get(post))
 
     for user in post_dict:
         
@@ -53,11 +53,11 @@ def main(**kwargs):
 
             save_dataframe(post_df, dest_path)
             print(f"Database saved: {dest_path}\n")
-    
+
     if driver:
         driver.quit()
 
-        
+
 def read_config():
 
     config = ConfigParser()
