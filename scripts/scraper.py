@@ -1,14 +1,13 @@
 import json
 import os
 import pandas as pd
-import requests
 from bs4 import BeautifulSoup
 from configparser import ConfigParser
 from datetime import datetime
 from pandas.errors import EmptyDataError
-from re import match, search
+from re import match
 from selenium import webdriver
-from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException, ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException, StaleElementReferenceException
 from time import sleep
 
 
