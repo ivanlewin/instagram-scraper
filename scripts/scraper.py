@@ -32,6 +32,9 @@ def main(**kwargs):
             sleep(2)
             post_df = scrape_post(driver.page_source)
 
+            if post_df is None:
+                continue
+
             if comments:
                 print("Scrapeando comentarios")
 
@@ -130,6 +133,11 @@ def scrape_post(post_html):
     post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
 
     soup = BeautifulSoup(post_html, "html.parser")
+
+    # chequear que el posteo no sea un 404
+    error_messages = ["Sorry, this page isn't available.", "Esta página no está disponible."]
+    if any([error_msg in soup.select_one('main').text for error_msg in error_messages]) :
+        return
 
     # Selecciono el script que tiene la metadata del posteo
     for script in soup.select("script[type='text/javascript']"):
