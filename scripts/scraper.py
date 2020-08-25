@@ -127,12 +127,12 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
     return driver
 
 
-def scrape_post(post_html):
+def scrape_post(html):
 
     # Inicializo las columnas en None
     post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
 
-    soup = BeautifulSoup(post_html, "html.parser")
+    soup = BeautifulSoup(html, "html.parser")
 
     # chequear que el posteo no sea un 404
     error_messages = ["Sorry, this page isn't available.", "Esta página no está disponible."]
