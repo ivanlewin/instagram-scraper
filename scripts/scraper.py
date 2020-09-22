@@ -136,7 +136,7 @@ def scrape_post(html):
 
     # chequear que el posteo no sea un 404
     error_messages = ["Sorry, this page isn't available.", "Esta página no está disponible."]
-    if any([error_msg in soup.select_one('main').text for error_msg in error_messages]) :
+    if any([error_msg in soup.select_one('main').text for error_msg in error_messages]):
         return
 
     # Selecciono el script que tiene la metadata del posteo
