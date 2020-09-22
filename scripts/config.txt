@@ -1,3 +1,9 @@
 [comments]
-comments = True
-replies = True
+scrape_comments = False
+
+# requires scrape_comments = True
+scrape_replies = True
+
+[output]
+# relative to instagram-scraper directory, if empty: default = './csv'
+output_folder = 
