@@ -134,9 +134,11 @@ def scrape_post(html):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # chequear que el posteo no sea un 404
+    # cuando el link es un 404 el body tiene una clase de 'dialog-404'
     error_messages = ["Sorry, this page isn't available.", "Esta página no está disponible."]
-    if any([error_msg in soup.select_one('main').text for error_msg in error_messages]):
+    if (
+        "dialog-404" in soup.select_one("body")["class"] or
+        any([error_msg in soup.select_one('body').text for error_msg in error_messages])):
         return
 
     # Selecciono el script que tiene la metadata del posteo
