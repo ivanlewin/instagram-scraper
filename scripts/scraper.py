@@ -21,6 +21,8 @@ def main(**kwargs):
     post_dict = read_posts()
     driver = load_driver()
 
+    print(f"Total de posteos: {sum([len(i) for i in [post_dict[user] for user in post_dict]])}\n")
+
     for user in post_dict:
 
         save_path = get_file_path(user, output_folder)
@@ -48,6 +50,7 @@ def main(**kwargs):
                     pass
 
             save_dataframe(post_df, save_path)
+
         print(f"Archivo guardado: {save_path}\n")
 
     driver.quit()

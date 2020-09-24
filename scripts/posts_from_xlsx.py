@@ -3,7 +3,7 @@ import openpyxl
 
 archivo = ""
 skip_row = 10
-columna = 12
+columna = 16
 
 # Escribe el valor del hipervínculo en la celda
 wb = openpyxl.load_workbook(archivo)
