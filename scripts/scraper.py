@@ -21,6 +21,8 @@ def main(**kwargs):
     post_dict = read_posts()
     driver = load_driver()
 
+    print(f"Total de posteos: {sum([len(i) for i in [post_dict[user] for user in post_dict]])}\n")
+
     for user in post_dict:
 
         save_path = get_file_path(user, output_folder)
@@ -48,6 +50,7 @@ def main(**kwargs):
                     pass
 
             save_dataframe(post_df, save_path)
+
         print(f"Archivo guardado: {save_path}\n")
 
     driver.quit()
@@ -134,9 +137,11 @@ def scrape_post(html):
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # chequear que el posteo no sea un 404
+    # cuando el link es un 404 el body tiene una clase de 'dialog-404'
     error_messages = ["Sorry, this page isn't available.", "Esta página no está disponible."]
-    if any([error_msg in soup.select_one('main').text for error_msg in error_messages]):
+    if (
+        "dialog-404" in soup.select_one("body")["class"] or
+        any([error_msg in soup.select_one('body').text for error_msg in error_messages])):
         return
 
     # Selecciono el script que tiene la metadata del posteo
