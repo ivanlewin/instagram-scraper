@@ -1,2 +1,5 @@
 bs4
 selenium
+openpyxl
+pandas
+xlrd

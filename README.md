@@ -1,4 +1,4 @@
-# instagram_scraper
+# instagram-scraper
 
 Esta herramienta escrita en Python permite obtener métricas y  comentarios de uno o más posteos de Instagram.
 
@@ -6,6 +6,8 @@ Para obtener la información del posteo, se hace una request HTTP con la librer�
 
 Para obtener los comentarios es necesario emular un navegador web, y para ello se utiliza la librería [`selenium`](https://pypi.org/project/selenium/). Selenium utiliza un *webdriver* (una versión del navegador apta para ser controlada y automatizada mediante comandos) que puede ser el `chromedriver` (para utilizar Google Chrome) o el `geckodriver` (para utilizar Mozilla Firefox).  
 Si el usuario ya tiene instalado uno de estos navegadores en su equipo puede optar por usar selenium con su perfil (ver [configuración de selenium](#sconfiguración-de-selenium)).
+
+Para cargar los posteos automáticamente desde un archivo Excel de fanpage, se utilizan las librerías [`openpyxl`](https://pypi.org/project/openpyxl/) (para transformar los hipervínculos de los links en el contenido de la celda) y [`pandas`](https://pypi.org/project/pandas/), para leer el archivo y armar las listas con los posteos de cada usuario.
 
 ## Instalación
 #### Instalación avanzada:
@@ -19,10 +21,10 @@ Si el usuario ya tiene instalado uno de estos navegadores en su equipo puede opt
 
 #### Instalación detallada:
 
-1. Descargar este proyecto [acá](https://github.com/ivanlewin/instagram-scraper/archive/master.zip) y extraer el archivo `.zip`.  
+1. Descargar este proyecto [acá](https://github.com/ivanlewin/instagram-scraper/archive/fanpage.zip) y extraer el archivo `.zip`.  
 
 1. Descargar e instalar [Python](https://www.python.org/downloads/). Asegurarse de marcar la opción para 'Agregar Python al PATH'.
-1. Instalar las librerías `beautifulsoup4` y `selenium`.
+1. Instalar las librerías `beautifulsoup4`, `selenium`, `openpyxl`, `pandas` y `xlrd`.
 Se pueden instalar corriendo los siguientes comandos en una consola.  
 
     ```bash
@@ -31,6 +33,18 @@ Se pueden instalar corriendo los siguientes comandos en una consola.
 
     ```bash
     pip install selenium
+    ```
+
+    ```bash
+    pip install openpyxl
+    ```
+
+    ```bash
+    pip install pandas
+    ```
+    
+    ```bash
+    pip install xlrd
     ```
 
 1. [Descargar el driver](#descargar-el-driver).
@@ -54,6 +68,10 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
         \---csv
         |       .gitkeep
         |
+        \---excel
+        |       .gitkeep
+        |       archivo_ejemplo.xlsx
+        |
         \---posts
         |       .gitkeep
         |       instagram.txt
@@ -62,6 +80,7 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
         |
         \---scripts
                 config.txt
+                posts_from_xlsx.py
                 scraper.py
                 chromedriver (o geckodriver.exe)
 
@@ -74,6 +93,19 @@ Descargar [`chromedriver`](https://chromedriver.chromium.org/downloads) o [`geck
 ## Correr el scraper
 1. Modificar el archivo [config.txt](./scripts/config.txt) de la carpeta **scripts** de acuerdo a lo que se quiera scrapear. Los valores posibles son `True` o `False`.  
 1. Abrir una consola y navegar hasta la carpeta **instagram_scraper**. Esto se puede hacer con el comando `cd`.
+1. Correr el archivo [posts_from_xlsx.py](./scripts/posts_from_xlsx.py). Esto se puede hacer con el comando `python ./scripts/posts_from_xlsx.py`.  
+
+    Por ejemplo, si la carpeta con mi proyecto estuviera en el escritorio, la consola debería aparecer así:
+
+        C:\Users\Ivan\Escritorio\instagram_scraper> python ./scripts/posts_from_xlsx.py
+
+
+**Nota**: Si al correr el script ya existe un archivo con el nombre del usuario, se sobreescribirá el archivo.
+
+## Correr el scraper
+
+
+1. Modificar el archivo [config.txt](./scripts/config.txt) de la carpeta **scripts** de acuerdo a lo que se quiera scrapear. Los valores posibles son `True` o `False`.  
 1. Correr el archivo [scraper.py](./scripts/scraper.py). Esto se puede hacer con el comando `python ./scripts/scraper.py`.  
 
     Por ejemplo, si la carpeta con mi proyecto estuviera en el escritorio, la consola debería aparecer así:

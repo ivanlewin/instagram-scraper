@@ -245,6 +245,9 @@ def scrape_comments(driver, replies=False):
 
                 try:
                     driver.execute_script("arguments[0].scrollIntoView();", button)
+                    header = driver.find_element_by_css_selector("header")
+                    driver.execute_script("arguments[0].scrollIntoView();", header)
+
 
                     text = button.text
                     while "Ver" in text or "View" in text:
