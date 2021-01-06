@@ -1,5 +1,5 @@
 [comments]
-scrape_comments = False
+scrape_comments = True
 
 # requires scrape_comments = True
 scrape_replies = True
