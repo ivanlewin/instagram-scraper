@@ -7,7 +7,8 @@ from datetime import datetime
 from pandas.errors import EmptyDataError
 from re import match
 from selenium import webdriver
-from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import ElementClickInterceptedException, \
+    NoSuchElementException, StaleElementReferenceException
 from time import sleep
 
 
@@ -21,7 +22,7 @@ def main(**kwargs):
     post_dict = read_posts()
     driver = load_driver()
 
-    print(f"Total de posteos: {sum([len(i) for i in [post_dict[user] for user in post_dict]])}\n")
+    print(f"Total de posteos: {sum([len(i)for i in [post_dict[user] for user in post_dict]])}\n")
 
     for user in post_dict:
 
@@ -43,8 +44,10 @@ def main(**kwargs):
                 comments_df = scrape_comments(driver, replies=replies)
 
                 try:
-                    post_df = pd.concat([post_df] * len(comments_df.index))  # Multiplicar la row del posteo por la cantidad de comments
-                    post_df = pd.concat([post_df, comments_df], axis=1)  # Unir los dataframes lado a lado horizontalmente
+                    # Multiplicar la row del posteo por la cantidad de comments
+                    post_df = pd.concat([post_df] * len(comments_df.index))
+                    # Unir los dataframes lado a lado horizontalmente
+                    post_df = pd.concat([post_df, comments_df], axis=1)
 
                 except ValueError:  # Dataframe vacío
                     pass
@@ -77,7 +80,7 @@ def read_config():
 def read_posts():
     posts = {}
     folder = "./posts"
-    files = [file for file in os.listdir(folder) if file != ".gitkeep"]  # Ignorar archivo .gitkeep
+    files = [file for file in os.listdir(folder) if file != ".gitkeep"]
     for file in files:
         user, _ = os.path.splitext(file)
         if user:
@@ -104,8 +107,11 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
         if existing_profile:
 
             if not profile:
+                # Usa el primer perfil de la carpeta
                 profiles_folder = os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
-                profile = os.path.join(profiles_folder, os.listdir(profiles_folder)[0])  # Usa el primer perfil de la carpeta
+                profile = os.path.join(
+                    profiles_folder,
+                    os.listdir(profiles_folder)[0])
 
             firefox_profile = webdriver.FirefoxProfile(profile_directory=profile)
             driver = webdriver.Firefox(firefox_profile)
@@ -118,7 +124,8 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
         if existing_profile:
 
             if not profile:
-                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data")  # Usa el perfil por defecto
+                # Usa el perfil por defecto
+                profile = os.path.expandvars("%LOCALAPPDATA%\\Google\\Chrome\\User Data")
 
             options = webdriver.ChromeOptions()
             options.add_argument("user-data-dir=" + profile)
@@ -133,15 +140,20 @@ def load_driver(driver="Firefox", existing_profile=False, profile=None):
 def scrape_post(html):
 
     # Inicializo las columnas en None
-    post_comments_count = post_caption = post_ig_id = post_like_count = post_media_type = post_shortcode = post_timestamp = post_username = post_views_count = post_location = post_location_id = None
+    post_comments_count = post_caption = post_ig_id = post_like_count = \
+        post_media_type = post_shortcode = post_timestamp = post_username = \
+        post_views_count = post_location = post_location_id = None
 
     soup = BeautifulSoup(html, "html.parser")
 
-    # cuando el link es un 404 el body tiene una clase de 'dialog-404'
-    error_messages = ["Sorry, this page isn't available.", "Esta página no está disponible."]
-    if (
-        "dialog-404" in soup.select_one("body")["class"] or
-        any([error_msg in soup.select_one('body').text for error_msg in error_messages])):
+    # 404s de Instagram
+    error_messages = [
+        "Sorry, this page isn't available.",
+        "Esta página no está disponible."
+        ]
+
+    # Chequear que el body sea un 404 ó que alguno de los mensjaes esté presente
+    if ("dialog-404" in soup.select_one("body")["class"] or any([error_msg in soup.select_one('body').text for error_msg in error_messages])):
         return
 
     # Selecciono el script que tiene la metadata del posteo
@@ -218,7 +230,7 @@ def scrape_post(html):
         "p_location_id": [post_location_id],
     })
 
-    # cambio el datatype de las columnas de id a strings para que no los castee a numbers
+    # cambio el datatype de las columnas de id a strings para que no se vuelva loca con los numeros
     post_df = post_df.astype({"p_ig_id": object, "p_owner": object, "p_location_id": object})
 
     return post_df
@@ -239,15 +251,15 @@ def scrape_comments(driver, replies=False):
     def load_replies():
         """Clickea todos los botones de 'x reply(ies)' hasta que no encuentre ninguno."""
         try:
+            header = driver.find_element_by_css_selector("header")
             view_replies_buttons = driver.find_elements_by_css_selector(".y3zKF")
 
             for button in view_replies_buttons:
 
                 try:
+                    # Scrollea hasta el button y después hasta el header
                     driver.execute_script("arguments[0].scrollIntoView();", button)
-                    header = driver.find_element_by_css_selector("header")
                     driver.execute_script("arguments[0].scrollIntoView();", header)
-
 
                     text = button.text
                     while "Ver" in text or "View" in text:
@@ -278,7 +290,9 @@ def scrape_comments(driver, replies=False):
             comment_reply_id = m[2]
 
             comment_timestamp = info.find_element_by_tag_name("time").get_attribute("datetime")
-            comment_timestamp = datetime.strptime(comment_timestamp, r"%Y-%m-%dT%H:%M:%S.%fZ")
+            comment_timestamp = datetime.strptime(
+                comment_timestamp,
+                r"%Y-%m-%dT%H:%M:%S.%fZ")
 
             likes = info.find_element_by_css_selector("button.FH9sR").text
             m = match(r"(\d+)", likes)
